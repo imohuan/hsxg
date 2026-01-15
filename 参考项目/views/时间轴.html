@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频编辑器时间轴 - Vue版</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定义滚动条样式 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111827;
+            /* gray-900 */
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            /* gray-600 */
+            border-radius: 4px;
+            border: 2px solid #111827;
+            /* 给滚动条加个边框看起来更精致 */
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        /* 隐藏垂直滚动条（左侧轨道头专用），但保留滚动功能 */
+        .hide-v-scrollbar::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        .hide-v-scrollbar {
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+
+        /* 禁用文本选择 */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 刻度尺背景 */
+        .ruler-bg {
+            background-image:
+                linear-gradient(to right, #4b5563 1px, transparent 1px),
+                linear-gradient(to right, #374151 1px, transparent 1px);
+            background-position: 0 0;
+            background-repeat: repeat-x;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-950 text-gray-300 overflow-hidden h-screen w-screen flex flex-col font-sans">
+
+    <div id="app" class="flex-1 flex overflow-hidden">
+
+        <!-- 左侧资源库 (Library) -->
+        <div class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0 z-20 shadow-xl">
+            <div class="h-12 flex items-center px-4 border-b border-gray-800 font-bold text-gray-100 tracking-wide">
+                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                资源库
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div v-for="item in libraryItems" :key="item.id" draggable="true"
+                    @dragstart="handleDragStartLibrary($event, item)"
+                    class="p-3 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 cursor-grab active:cursor-grabbing flex items-center gap-3 transition-all hover:-translate-y-0.5 shadow-sm group">
+                    <div
+                        :class="['w-10 h-10 rounded flex items-center justify-center text-white shadow-sm', item.colorClass]">
+                        <svg v-if="item.type === 'video'" class="w-5 h-5" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium text-gray-200 truncate group-hover:text-white">{{ item.name }}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-0.5">{{ formatTime(item.defaultDuration) }}</div>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 border border-dashed border-gray-700 rounded-lg text-center">
+                    <p class="text-xs text-gray-500 mb-1">将素材拖拽到右侧轨道</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧主工作区 -->
+        <div class="flex-1 flex flex-col min-w-0 bg-gray-950">
+
+            <!-- 上半部分：预览区 (占位) -->
+            <div class="flex-1 flex items-center justify-center relative bg-black/20">
+                <div class="text-center opacity-20">
+                    <svg class="w-24 h-24 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM8 15c0-1.66 1.34-3 3-3 .35 0 .69.07 1 .18V6h5v2h-3v7.03A3.003 3.003 0 0 1 8 15z" />
+                    </svg>
+                    <div class="text-xl font-bold">PREVIEW</div>
+                </div>
+            </div>
+
+            <!-- 下半部分：时间轴 (Timeline) -->
+            <!-- 固定高度容器，flex-col -->
+            <div
+                class="h-80 flex flex-col border-t border-gray-800 bg-gray-900 select-none shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
+
+                <!-- 1. 工具栏 (Toolbar) -->
+                <div
+                    class="h-10 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 shrink-0 z-30">
+                    <div class="flex items-center gap-4">
+                        <div class="text-lg font-mono font-bold text-blue-400 w-24">{{ formatTime(currentTime) }}</div>
+                        <div class="h-4 w-px bg-gray-700"></div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1">
+                            <span
+                                class="bg-gray-700 px-1.5 py-0.5 rounded text-gray-300 border border-gray-600">Ctrl</span>
+                            <span>+ 滚轮缩放</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button @click="addTrack"
+                            class="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700 text-xs text-gray-300 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            添加轨道
+                        </button>
+                        <div class="h-4 w-px bg-gray-700"></div>
+                        <button @click="zoomOut" class="p-1.5 hover:bg-gray-700 rounded-md transition-colors"
+                            title="缩小 (-)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                            </svg>
+                        </button>
+                        <div class="w-24 px-2">
+                            <input type="range" min="5" max="200" step="5" v-model.number="zoom"
+                                class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        </div>
+                        <button @click="zoomIn" class="p-1.5 hover:bg-gray-700 rounded-md transition-colors"
+                            title="放大 (+)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. 轨道与内容区域 (Split Pane) -->
+                <!-- 垂直滚动同步的关键区域：左右并排，flex-1占据剩余空间 -->
+                <div class="flex-1 flex  overflow-scroll custom-scrollbar relative group">
+
+                    <!-- 左侧：轨道头 (Headers) -->
+                    <div class="w-48 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0 z-20 relative">
+                        <!-- 左上角占位块 (对应右侧标尺高度) -->
+                        <div class="h-8 border-b border-gray-700 bg-gray-800 shrink-0 shadow-sm z-20 relative"></div>
+
+                        <!-- 轨道头列表：允许垂直滚动，但隐藏滚动条 (hide-v-scrollbar) -->
+                        <div class="flex-1 overflow-y-scroll overflow-x-hidden hide-v-scrollbar relative"
+                            ref="leftScrollContainer">
+                            <div class="pb-10"> <!-- pb-10 留出底部空间 -->
+                                <div v-for="track in tracks" :key="track.id"
+                                    class="border-b border-gray-700 px-3 flex items-center justify-between bg-gray-800 hover:bg-gray-750 transition-colors relative"
+                                    :style="{ height: TRACK_HEIGHT + 'px' }">
+                                    <div class="flex items-center gap-2 overflow-hidden">
+                                        <div
+                                            :class="['w-1 h-4 rounded-full', track.type === 'video' ? 'bg-blue-500' : 'bg-emerald-500']">
+                                        </div>
+                                        <span class="text-xs text-gray-300 font-medium truncate">{{ track.name }}</span>
+                                    </div>
+                                    <div class="flex gap-1.5 text-gray-500">
+                                        <button class="hover:text-gray-200"><svg class="w-3.5 h-3.5" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg></button>
+                                        <button class="hover:text-gray-200"><svg class="w-3.5 h-3.5" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                            </svg></button>
+                                    </div>
+
+                                    <!-- 选中指示器 -->
+                                    <div v-if="dragging && dragging.trackId === track.id"
+                                        class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：时间轴内容 (Content) -->
+                    <!-- 唯一的滚动驱动器，处理 X 和 Y 轴滚动 -->
+                    <div class="flex-1 relative bg-gray-900 scroll-smooth-off" ref="rightScrollContainer"
+                        @scroll="handleScroll" @wheel="handleWheel" @click="handleTimelineClick">
+                        <!-- 1. Sticky Ruler (标尺) -->
+                        <div class="sticky top-0 z-30 h-8 bg-gray-800/95 border-b border-gray-700 backdrop-blur min-w-full"
+                            :style="{ width: totalWidth + 'px' }">
+                            <div class="absolute inset-0 ruler-bg pointer-events-none opacity-60" :style="{ 
+                                    backgroundSize: `${zoom * 5}px 100%, ${zoom}px 100%`, 
+                                    backgroundImage: `linear-gradient(to right, #9ca3af 1px, transparent 1px), linear-gradient(to right, #4b5563 1px, transparent 1px)` 
+                                }">
+                                <!-- 大刻度数字 -->
+                                <div v-for="i in Math.ceil(totalDuration / 5) + 2" :key="i"
+                                    class="absolute top-0.5 text-[10px] font-mono text-gray-400 pl-1.5 select-none"
+                                    :style="{ left: (i-1)*5*zoom + 'px' }">
+                                    {{ formatTime((i-1)*5) }}
+                                </div>
+                            </div>
+
+                            <!-- 播放头帽子 -->
+                            <div class="absolute top-0 bottom-0 w-0 z-40"
+                                :style="{ left: timeToPx(currentTime) + 'px' }">
+                                <div class="absolute -translate-x-1/2 top-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500 cursor-ew-resize hover:scale-110 transition-transform"
+                                    @mousedown.stop="startScrubbing"></div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Tracks Container -->
+                        <div class="relative min-w-full pb-20" :style="{ width: totalWidth + 'px' }">
+
+                            <!-- 轨道背景线 (Grid) -->
+                            <div v-for="track in tracks" :key="'bg-'+track.id"
+                                class="border-b border-gray-800 w-full relative box-border"
+                                :style="{ height: TRACK_HEIGHT + 'px' }" @dragover.prevent
+                                @drop="handleDrop($event, track.id)">
+                                <!-- 辅助网格 -->
+                                <div class="absolute inset-0 pointer-events-none border-r border-gray-800/30"
+                                    :style="{ width: zoom + 'px', backgroundSize: zoom + 'px 100%' }"></div>
+                            </div>
+
+                            <!-- 3. Items (素材块) -->
+                            <div class="absolute inset-0 pointer-events-none">
+                                <div v-for="item in items" :key="item.id"
+                                    class="absolute rounded-md overflow-hidden border border-black/30 shadow-md cursor-pointer group pointer-events-auto transition-opacity"
+                                    :class="[
+                                        item.colorClass, 
+                                        dragging && dragging.itemId === item.id ? 'z-50 shadow-xl ring-2 ring-white/80 opacity-90' : 'z-10 hover:brightness-110'
+                                    ]" :style="{
+                                        left: timeToPx(item.start) + 'px',
+                                        top: (getTrackIndex(item.trackId) * TRACK_HEIGHT) + 2 + 'px',
+                                        width: Math.max(4, timeToPx(item.duration)) + 'px',
+                                        height: (TRACK_HEIGHT - 4) + 'px',
+                                    }" @mousedown.stop="handleMouseDown($event, item, 'move')">
+                                    <!-- 缩略内容 -->
+                                    <div class="w-full h-full px-2 flex flex-col justify-center overflow-hidden">
+                                        <div
+                                            class="text-[11px] font-bold text-white/90 truncate leading-tight select-none">
+                                            {{ item.name }}
+                                        </div>
+                                        <div class="text-[9px] text-white/60 truncate font-mono">
+                                            {{ item.duration.toFixed(1) }}s
+                                        </div>
+                                    </div>
+
+                                    <!-- 调节柄 -->
+                                    <div class="absolute left-0 top-0 bottom-0 w-3 cursor-w-resize hover:bg-white/20 z-20 group/handle flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                        @mousedown.stop="handleMouseDown($event, item, 'resize-left')">
+                                        <div class="w-0.5 h-3 bg-white/50 rounded-full"></div>
+                                    </div>
+                                    <div class="absolute right-0 top-0 bottom-0 w-3 cursor-e-resize hover:bg-white/20 z-20 group/handle flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                        @mousedown.stop="handleMouseDown($event, item, 'resize-right')">
+                                        <div class="w-0.5 h-3 bg-white/50 rounded-full"></div>
+                                    </div>
+
+                                    <!-- 删除 -->
+                                    <button
+                                        class="absolute right-1 top-1 hidden group-hover:block bg-gray-900/60 hover:bg-red-600 text-white rounded p-0.5 backdrop-blur-sm transition-colors"
+                                        @click.stop="deleteItem(item.id)" title="删除 (Del)">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 4. 全局辅助线 -->
+
+                            <!-- 吸附线 -->
+                            <div v-if="snapLine !== null"
+                                class="absolute top-0 bottom-0 w-px bg-yellow-400 z-[60] pointer-events-none shadow-[0_0_8px_rgba(250,204,21,0.6)]"
+                                :style="{ left: snapLine + 'px' }">
+                                <div
+                                    class="sticky top-10 ml-1 text-[10px] bg-yellow-400 text-black px-1 rounded font-mono font-bold inline-block">
+                                    {{ formatTime(pxToTime(snapLine)) }}
+                                </div>
+                            </div>
+
+                            <!-- 播放头线 -->
+                            <div class="absolute top-0 bottom-0 w-px bg-red-500 z-40 pointer-events-none"
+                                :style="{ left: timeToPx(currentTime) + 'px' }"></div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // --- 配置 ---
+                const TRACK_HEIGHT = 30; // 统一高度 40px (对应 h-10)
+                const SNAP_THRESHOLD = 12; // 吸附力度
+                const MIN_ZOOM = 5;
+                const MAX_ZOOM = 200;
+
+                // --- 状态 ---
+                const zoom = ref(20); // px per second
+                const currentTime = ref(0);
+
+                // 模拟数据
+                const tracks = ref([
+                    { id: 'v1', name: 'Video Track 1', type: 'video' },
+                    { id: 'v2', name: 'Video Track 2', type: 'video' },
+                    { id: 'v3', name: 'Overlay Effects', type: 'video' },
+                    { id: 'a1', name: 'Audio Background', type: 'audio' },
+                    { id: 'a2', name: 'Voiceover', type: 'audio' },
+                    { id: 'a3', name: 'SFX', type: 'audio' },
+                ]);
+
+                const items = ref([
+                    { id: '1', trackId: 'v1', start: 0, duration: 12, name: 'MainCamera_01.mp4', colorClass: 'bg-blue-600' },
+                    { id: '2', trackId: 'v2', start: 6, duration: 4, name: 'B-Roll_City.mp4', colorClass: 'bg-indigo-600' },
+                    { id: '3', trackId: 'a1', start: 0, duration: 20, name: 'Chill_Beats.mp3', colorClass: 'bg-emerald-600' }
+                ]);
+
+                const libraryItems = [
+                    { id: 'lib1', name: 'Nature_Drone.mp4', defaultDuration: 8, type: 'video', colorClass: 'bg-blue-600' },
+                    { id: 'lib2', name: 'City_Timelapse.mp4', defaultDuration: 5, type: 'video', colorClass: 'bg-blue-500' },
+                    { id: 'lib3', name: 'Explosion_SFX.mp3', defaultDuration: 2, type: 'audio', colorClass: 'bg-emerald-600' },
+                    { id: 'lib4', name: 'Title_Intro', defaultDuration: 4, type: 'video', colorClass: 'bg-purple-600' },
+                    { id: 'lib5', name: 'Transition_Wipe', defaultDuration: 1, type: 'video', colorClass: 'bg-orange-500' },
+                ];
+
+                // 交互状态
+                const dragging = ref(null);
+                const snapLine = ref(null);
+
+                // 引用 DOM 元素，用于滚动同步
+                const leftScrollContainer = ref(null);
+                const rightScrollContainer = ref(null);
+
+                // --- 计算属性 ---
+                const totalDuration = computed(() => {
+                    return Math.max(30, ...items.value.map(i => i.start + i.duration));
+                });
+
+                const totalWidth = computed(() => {
+                    // 保证至少有一屏宽度，或者内容宽度 + 200px 余量
+                    const contentW = (totalDuration.value + 20) * zoom.value;
+                    return Math.max(contentW, window.innerWidth - 256); // 256 is sidebar width
+                });
+
+                // --- 核心方法 ---
+
+                // 1. 滚动同步 (解决垂直对齐问题的关键)
+                const handleScroll = (e) => {
+                    // 确保是右侧容器触发的滚动，并且左侧容器存在
+                    if (leftScrollContainer.value) {
+                        // 强制左侧列的 scrollTop 等于右侧列的 scrollTop
+                        leftScrollContainer.value.scrollTop = e.target.scrollTop;
+                    }
+                };
+
+                // 2. Ctrl + 滚轮缩放 (Anchor Zoom)
+                const handleWheel = (e) => {
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const oldZoom = zoom.value;
+                        const delta = e.deltaY > 0 ? -0.1 : 0.1; // 缩放系数
+                        let newZoom = oldZoom * (1 + delta);
+
+                        // Clamp zoom
+                        newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+
+                        if (newZoom !== oldZoom) {
+                            // 计算鼠标当前指向的时间点 (Anchor Point)
+                            const rect = rightScrollContainer.value.getBoundingClientRect();
+                            const mouseX = e.clientX - rect.left; // 鼠标在可视区域的 X
+                            const scrollLeft = rightScrollContainer.value.scrollLeft;
+
+                            // Mouse Time = (ScrollLeft + MouseX) / OldZoom
+                            const anchorTime = (scrollLeft + mouseX) / oldZoom;
+
+                            // 更新 Zoom
+                            zoom.value = newZoom;
+
+                            // 调整 ScrollLeft 使得 AnchorTime 依然在 MouseX 处
+                            // NewScrollLeft + MouseX = AnchorTime * NewZoom
+                            // NewScrollLeft = AnchorTime * NewZoom - MouseX
+                            nextTick(() => {
+                                if (rightScrollContainer.value) {
+                                    rightScrollContainer.value.scrollLeft = (anchorTime * newZoom) - mouseX;
+                                }
+                            });
+                        }
+                    }
+                };
+
+                // --- 辅助计算 ---
+                const timeToPx = (t) => t * zoom.value;
+                const pxToTime = (p) => p / zoom.value;
+
+                const formatTime = (seconds) => {
+                    const m = Math.floor(seconds / 60);
+                    const s = Math.floor(seconds % 60);
+                    // const f = Math.floor((seconds % 1) * 10); // 简易帧数
+                    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                };
+
+                const getTrackIndex = (trackId) => tracks.value.findIndex(t => t.id === trackId);
+
+                // --- 吸附逻辑 ---
+                const calculateSnap = (targetTime, ignoreItemId = null) => {
+                    const points = new Set([0, currentTime.value]);
+                    items.value.forEach(it => {
+                        if (it.id === ignoreItemId) return;
+                        points.add(it.start);
+                        points.add(it.start + it.duration);
+                    });
+
+                    const targetPx = timeToPx(targetTime);
+                    let bestSnapPx = null;
+                    let minDiff = SNAP_THRESHOLD;
+
+                    for (const pTime of points) {
+                        const pPx = timeToPx(pTime);
+                        const diff = Math.abs(pPx - targetPx);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestSnapPx = pPx;
+                        }
+                    }
+
+                    if (bestSnapPx !== null) {
+                        return { snapped: true, time: pxToTime(bestSnapPx), px: bestSnapPx };
+                    }
+                    return { snapped: false, time: targetTime, px: null };
+                };
+
+                // --- 拖拽交互 ---
+
+                // A. 库拖拽开始
+                const handleDragStartLibrary = (e, item) => {
+                    e.dataTransfer.setData('application/json', JSON.stringify(item));
+                    e.dataTransfer.effectAllowed = 'copy';
+                };
+
+                // B. 库拖拽放置 (修复 Drop 偏移)
+                const handleDrop = (e, trackId) => {
+                    const dataStr = e.dataTransfer.getData('application/json');
+                    if (!dataStr) return;
+
+                    const data = JSON.parse(dataStr);
+                    const rect = rightScrollContainer.value.getBoundingClientRect();
+                    // 鼠标在内容全景图中的绝对像素位置
+                    const absoluteX = e.clientX - rect.left + rightScrollContainer.value.scrollLeft;
+
+                    // 关键修复：让素材的中心对齐鼠标位置，而不是左边缘
+                    const mouseTime = pxToTime(absoluteX);
+                    const halfDuration = data.defaultDuration / 2;
+                    let startTime = Math.max(0, mouseTime - halfDuration);
+
+                    // Drop 吸附
+                    const snap = calculateSnap(startTime);
+                    if (snap.snapped) startTime = snap.time;
+
+                    items.value.push({
+                        id: Date.now().toString(),
+                        trackId: trackId,
+                        start: startTime,
+                        duration: data.defaultDuration,
+                        name: data.name,
+                        colorClass: data.colorClass
+                    });
+                };
+
+                // C. 轨道内素材操作 (Move / Resize)
+                const handleMouseDown = (e, item, type) => {
+                    // 记录初始状态
+                    dragging.value = {
+                        type,
+                        itemId: item.id,
+                        // 记录鼠标点击位置相对于 Item 左边缘的偏移量 (px)
+                        // 修复拖拽偏移的关键：记录鼠标相对于 item 左边缘的距离
+                        clickOffsetInItem: e.clientX - (rightScrollContainer.value.getBoundingClientRect().left + timeToPx(item.start) - rightScrollContainer.value.scrollLeft),
+
+                        startX: e.clientX,
+                        originalStart: item.start,
+                        originalDuration: item.duration,
+                        trackId: item.trackId
+                    };
+
+                    // 监听全局鼠标
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                };
+
+                const onMouseMove = (e) => {
+                    if (!dragging.value) return;
+
+                    const { type, itemId, clickOffsetInItem, startX, originalStart, originalDuration } = dragging.value;
+                    const rect = rightScrollContainer.value.getBoundingClientRect();
+
+                    if (type === 'move') {
+                        // 1. 计算新的轨道 (Y轴)
+                        // 鼠标相对于右侧容器顶部的 Y
+                        const relativeY = e.clientY - rect.top + rightScrollContainer.value.scrollTop - 32; // 32 is Ruler height
+                        const trackIndex = Math.floor(relativeY / TRACK_HEIGHT);
+                        const newTrack = tracks.value[Math.max(0, Math.min(tracks.value.length - 1, trackIndex))];
+
+                        // 2. 计算新的时间 (X轴)
+                        // 当前鼠标在内容中的绝对位置
+                        const currentMouseAbsX = e.clientX - rect.left + rightScrollContainer.value.scrollLeft;
+                        // 理想的 Item Start X = 鼠标位置 - 点击时的内部偏移
+                        const rawNewStartPx = currentMouseAbsX - clickOffsetInItem;
+                        let newStart = Math.max(0, pxToTime(rawNewStartPx));
+
+                        // 3. 吸附处理
+                        // 优先左吸附
+                        const snapLeft = calculateSnap(newStart, itemId);
+                        const snapRight = calculateSnap(newStart + originalDuration, itemId);
+
+                        let finalStart = newStart;
+                        let activeSnapPx = null;
+
+                        if (snapLeft.snapped) {
+                            finalStart = snapLeft.time;
+                            activeSnapPx = snapLeft.px;
+                        } else if (snapRight.snapped) {
+                            finalStart = snapRight.time - originalDuration;
+                            activeSnapPx = snapRight.px;
+                        }
+
+                        // 4. 应用更新
+                        const item = items.value.find(i => i.id === itemId);
+                        if (item) {
+                            item.start = finalStart;
+                            if (newTrack) item.trackId = newTrack.id;
+                        }
+                        snapLine.value = activeSnapPx;
+                    }
+                    else if (type.startsWith('resize')) {
+                        const item = items.value.find(i => i.id === itemId);
+                        const deltaX = e.clientX - startX;
+                        const deltaTime = pxToTime(deltaX);
+
+                        if (type === 'resize-right') {
+                            let newDur = Math.max(0.1, originalDuration + deltaTime);
+                            let newEnd = originalStart + newDur;
+
+                            const snap = calculateSnap(newEnd, itemId);
+                            if (snap.snapped) {
+                                newDur = snap.time - originalStart;
+                                snapLine.value = snap.px;
+                            } else {
+                                snapLine.value = null;
+                            }
+                            item.duration = Math.max(0.1, newDur);
+                        } else {
+                            // Resize Left (Complex: changes start & duration)
+                            let newStart = Math.max(0, originalStart + deltaTime);
+                            let newDur = originalDuration - (newStart - originalStart);
+
+                            if (newDur > 0.1) {
+                                const snap = calculateSnap(newStart, itemId);
+                                if (snap.snapped) {
+                                    newStart = snap.time;
+                                    newDur = originalDuration - (newStart - originalStart);
+                                    snapLine.value = snap.px;
+                                } else {
+                                    snapLine.value = null;
+                                }
+                                item.start = newStart;
+                                item.duration = newDur;
+                            }
+                        }
+                    }
+                };
+
+                const onMouseUp = () => {
+                    dragging.value = null;
+                    snapLine.value = null;
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                };
+
+                // 播放头
+                const startScrubbing = (e) => {
+                    const handleScrub = (ev) => {
+                        const rect = rightScrollContainer.value.getBoundingClientRect();
+                        const offsetX = ev.clientX - rect.left + rightScrollContainer.value.scrollLeft;
+                        let newTime = Math.max(0, pxToTime(offsetX));
+                        const snap = calculateSnap(newTime);
+                        if (snap.snapped) newTime = snap.time;
+                        currentTime.value = newTime;
+                    };
+                    const stopScrub = () => {
+                        document.removeEventListener('mousemove', handleScrub);
+                        document.removeEventListener('mouseup', stopScrub);
+                    };
+                    document.addEventListener('mousemove', handleScrub);
+                    document.addEventListener('mouseup', stopScrub);
+                };
+
+                const handleTimelineClick = (e) => {
+                    if (dragging.value) return;
+                    // 在此添加点击空白处移动播放头的逻辑 (可选)
+                };
+
+                const deleteItem = (id) => {
+                    items.value = items.value.filter(i => i.id !== id);
+                };
+
+                const addTrack = () => {
+                    tracks.value.push({
+                        id: 't' + Date.now(),
+                        name: 'New Track ' + (tracks.value.length + 1),
+                        type: 'video'
+                    });
+                    // 当添加轨道时，需要确保滚动条显示出来，所以需要下一帧更新
+                    nextTick(() => {
+                        // 确保新轨道可见
+                        if (rightScrollContainer.value) {
+                            rightScrollContainer.value.scrollTop = rightScrollContainer.value.scrollHeight;
+                        }
+                    });
+                };
+
+                const zoomIn = () => zoom.value = Math.min(MAX_ZOOM, zoom.value * 1.2);
+                const zoomOut = () => zoom.value = Math.max(MIN_ZOOM, zoom.value / 1.2);
+
+                return {
+                    tracks, items, libraryItems,
+                    zoom, currentTime, totalDuration, totalWidth,
+                    dragging, snapLine, leftScrollContainer, rightScrollContainer,
+                    TRACK_HEIGHT,
+                    timeToPx, pxToTime, formatTime, getTrackIndex,
+                    handleDragStartLibrary, handleDrop, handleMouseDown,
+                    handleScroll, handleWheel, handleTimelineClick, startScrubbing,
+                    deleteItem, addTrack, zoomIn, zoomOut
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

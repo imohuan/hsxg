@@ -6,13 +6,13 @@
 
 **全程使用中文进行沟通**，技术术语保留英文（如 Vue、TypeScript、Pinia）。
 
-## 文档路由: 请查询对应的所有文档
+## 文档路由
 
-| 任务       | 文档                              |
-| ---------- | --------------------------------- |
-| 新功能开发 | [项目规范](/docs/project-spec.md) |
-| 遇到报错   | [问题速查](/docs/issues.md)       |
-| 运行命令   | [常用命令](/docs/commands.md)     |
+| 任务       | 文档                          |
+| ---------- | ----------------------------- |
+| 新功能开发 | [项目规范](./project-spec.md) |
+| 遇到报错   | [问题速查](./issues.md)       |
+| 运行命令   | [常用命令](./commands.md)     |
 
 ## 环境
 
@@ -65,7 +65,23 @@ src/
 
 ## Tailwind CSS v4
 
-`<style scoped>` 中使用 `@apply` 必须添加：
+样式直接写在元素属性上，避免使用 `<style scoped>` 标签：
+
+```vue
+<!-- ✅ 推荐 -->
+<div class="flex items-center gap-2 bg-white p-4">
+  <span class="text-sm text-gray-600">内容</span>
+</div>
+
+<!-- ❌ 避免 -->
+<style scoped>
+.container {
+  @apply flex items-center;
+}
+</style>
+```
+
+如必须使用 `<style scoped>` 中的 `@apply`，需添加：
 
 ```vue
 <style scoped>
