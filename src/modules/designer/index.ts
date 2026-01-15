@@ -10,6 +10,9 @@ export { default as JsonTab } from "./pages/JsonTab.vue";
 // 组件
 export { default as SpriteEditor } from "./components/SpriteEditor.vue";
 export { default as AnimationPreview } from "./components/AnimationPreview.vue";
+export { default as CharacterPanel } from "./components/CharacterPanel.vue";
+export { default as EffectPanel } from "./components/EffectPanel.vue";
+export { default as JsonPanel } from "./components/JsonPanel.vue";
 
 // Composables
 export * from "./composables/useSpriteSheet";

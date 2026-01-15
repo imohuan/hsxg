@@ -1,46 +1,40 @@
 <script setup lang="ts">
 /**
- * 角色编辑标签页
- * 整合雪碧图编辑器和动画预览组件
+ * @file 角色编辑标签页
+ * @description 整合雪碧图编辑器、角色面板和动画预览组件
+ * Requirements: 4.1-4.8
  */
 import { ref, computed, watch } from "vue";
+import { AddOutlined, DeleteOutlined, PlayArrowOutlined, RefreshOutlined } from "@vicons/material";
+import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
 import SpriteEditor from "../components/SpriteEditor.vue";
 import AnimationPreview from "../components/AnimationPreview.vue";
+import CharacterPanel from "../components/CharacterPanel.vue";
 import { useSpriteSheet, type SpriteFrame } from "../composables/useSpriteSheet";
-import type { SpriteConfig, AnimationConfig } from "../../../types";
+import { useDesignerStore } from "@/stores/designer.store";
+import type { SpriteConfig, AnimationConfig, CharacterConfig } from "@/types";
+
+// ============ Store ============
+
+const designerStore = useDesignerStore();
 
 // ============ 状态 ============
 
-/** 雪碧图解析 */
 const spriteSheet = useSpriteSheet();
-
-/** 当前选中的帧 */
 const selectedFrames = ref<number[]>([]);
-
-/** 动画列表 */
 const animations = ref<AnimationConfig[]>([]);
-
-/** 当前编辑的动画索引 */
 const currentAnimationIndex = ref<number | null>(null);
-
-/** 新动画名称 */
 const newAnimationName = ref("");
-
-/** 动画帧率 */
 const animationFps = ref(12);
-
-/** 是否循环播放 */
 const animationLoop = ref(true);
 
 // ============ 计算属性 ============
 
-/** 当前编辑的动画 */
 const currentAnimation = computed(() => {
   if (currentAnimationIndex.value === null) return null;
   return animations.value[currentAnimationIndex.value] ?? null;
 });
 
-/** 当前动画的帧序列 */
 const currentAnimationFrames = computed<SpriteFrame[]>(() => {
   if (!currentAnimation.value) return [];
   return currentAnimation.value.frames
@@ -48,26 +42,43 @@ const currentAnimationFrames = computed<SpriteFrame[]>(() => {
     .filter((frame): frame is SpriteFrame => frame !== null);
 });
 
+/** 当前雪碧图配置 */
+const currentSpriteConfig = computed<SpriteConfig>(() => ({
+  url: spriteSheet.imageUrl.value,
+  rows: spriteSheet.rows.value,
+  cols: spriteSheet.cols.value,
+  frameCount: spriteSheet.frameCount.value,
+  fps: animationFps.value,
+  scale: 1,
+}));
+
+/** 当前角色 */
+const currentCharacter = computed(() => {
+  if (!designerStore.currentCharacterId) return null;
+  return designerStore.getCharacter(designerStore.currentCharacterId);
+});
+
 // ============ 方法 ============
 
-/** 处理雪碧图配置变更 */
 function handleSpriteConfigChange(config: SpriteConfig): void {
-  // 配置变更时可以在这里处理
-  console.log("雪碧图配置变更:", config);
+  // 如果有当前角色，更新其雪碧图配置
+  if (currentCharacter.value) {
+    designerStore.updateCharacter(currentCharacter.value.id, {
+      sprite: config,
+    });
+  }
 }
 
-/** 处理帧选中 */
 function handleFrameSelect(frame: SpriteFrame): void {
-  // 如果正在编辑动画，将选中的帧添加到动画中
   if (currentAnimationIndex.value !== null) {
     const animation = animations.value[currentAnimationIndex.value];
     if (animation && !animation.frames.includes(frame.index)) {
       animation.frames.push(frame.index);
+      saveAnimationsToStore();
     }
   }
 }
 
-/** 添加新动画 */
 function addAnimation(): void {
   const newAnimation: AnimationConfig = {
     key: newAnimationName.value.trim() || `anim_${Date.now()}`,
@@ -79,9 +90,9 @@ function addAnimation(): void {
   currentAnimationIndex.value = animations.value.length - 1;
   newAnimationName.value = "";
   selectedFrames.value = [];
+  saveAnimationsToStore();
 }
 
-/** 删除动画 */
 function deleteAnimation(index: number): void {
   animations.value.splice(index, 1);
   if (currentAnimationIndex.value === index) {
@@ -89,9 +100,9 @@ function deleteAnimation(index: number): void {
   } else if (currentAnimationIndex.value !== null && currentAnimationIndex.value > index) {
     currentAnimationIndex.value--;
   }
+  saveAnimationsToStore();
 }
 
-/** 选择动画进行编辑 */
 function selectAnimation(index: number): void {
   currentAnimationIndex.value = index;
   const anim = animations.value[index];
@@ -101,7 +112,6 @@ function selectAnimation(index: number): void {
   }
 }
 
-/** 从动画中移除帧 */
 function removeFrameFromAnimation(frameIndex: number): void {
   if (currentAnimationIndex.value === null) return;
   const animation = animations.value[currentAnimationIndex.value];
@@ -109,98 +119,170 @@ function removeFrameFromAnimation(frameIndex: number): void {
     const idx = animation.frames.indexOf(frameIndex);
     if (idx !== -1) {
       animation.frames.splice(idx, 1);
+      saveAnimationsToStore();
     }
   }
 }
 
-/** 更新动画帧率 */
 function updateAnimationFps(fps: number): void {
   animationFps.value = fps;
   if (currentAnimationIndex.value !== null) {
     const anim = animations.value[currentAnimationIndex.value];
     if (anim) {
       anim.fps = fps;
+      saveAnimationsToStore();
     }
   }
 }
 
-/** 清空当前动画帧 */
 function clearAnimationFrames(): void {
   if (currentAnimationIndex.value !== null) {
     const anim = animations.value[currentAnimationIndex.value];
     if (anim) {
       anim.frames = [];
+      saveAnimationsToStore();
     }
   }
 }
 
+/** 保存动画到 Store */
+function saveAnimationsToStore(): void {
+  if (currentCharacter.value) {
+    designerStore.updateCharacter(currentCharacter.value.id, {
+      animations: [...animations.value],
+    });
+  }
+}
+
+/** 处理角色选择 */
+function handleCharacterSelect(character: CharacterConfig): void {
+  // 加载角色的雪碧图和动画配置
+  loadCharacterData(character);
+}
+
+/** 处理角色加载 */
+function handleCharacterLoad(character: CharacterConfig): void {
+  loadCharacterData(character);
+}
+
+/** 加载角色数据 */
+async function loadCharacterData(character: CharacterConfig): Promise<void> {
+  // 加载雪碧图
+  if (character.sprite.url) {
+    await spriteSheet.loadImage(character.sprite.url);
+    spriteSheet.setGridSize(character.sprite.rows, character.sprite.cols);
+    spriteSheet.setFrameCount(character.sprite.frameCount);
+  } else {
+    spriteSheet.reset();
+  }
+
+  // 加载动画列表
+  animations.value = character.animations.map((anim) => ({ ...anim }));
+  currentAnimationIndex.value = animations.value.length > 0 ? 0 : null;
+
+  if (animations.value.length > 0) {
+    const firstAnim = animations.value[0];
+    animationFps.value = firstAnim.fps;
+    animationLoop.value = firstAnim.repeat === -1;
+  }
+}
+
+/** 处理新建角色 */
+function handleCharacterCreate(): void {
+  // 重置编辑器状态
+  spriteSheet.reset();
+  animations.value = [];
+  currentAnimationIndex.value = null;
+}
+
 // ============ 监听 ============
 
-// 监听帧率变化，同步到当前动画
 watch(animationFps, (newFps) => {
   if (currentAnimationIndex.value !== null) {
     const anim = animations.value[currentAnimationIndex.value];
     if (anim) {
       anim.fps = newFps;
+      saveAnimationsToStore();
     }
   }
 });
 
-// 监听循环设置变化
 watch(animationLoop, (loop) => {
   if (currentAnimationIndex.value !== null) {
     const anim = animations.value[currentAnimationIndex.value];
     if (anim) {
       anim.repeat = loop ? -1 : 0;
+      saveAnimationsToStore();
     }
   }
 });
+
+// 监听当前角色变化
+watch(
+  () => designerStore.currentCharacterId,
+  (newId) => {
+    if (newId) {
+      const character = designerStore.getCharacter(newId);
+      if (character) {
+        loadCharacterData(character);
+      }
+    }
+  },
+);
 </script>
 
 <template>
-  <div class="flex h-full gap-4 p-4">
-    <!-- 左侧：雪碧图编辑器 -->
-    <div class="flex-1 overflow-hidden">
-      <SpriteEditor
-        @change="handleSpriteConfigChange"
-        @frame-select="handleFrameSelect"
-      />
-    </div>
+  <DesignerTabLayout>
+    <template #left>
+      <!-- 角色管理面板 -->
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <CharacterPanel
+          :sprite-config="currentSpriteConfig"
+          :animations="animations"
+          @select="handleCharacterSelect"
+          @create="handleCharacterCreate"
+          @load="handleCharacterLoad"
+        />
+      </div>
 
-    <!-- 右侧：动画配置面板 -->
-    <div class="flex w-80 flex-col gap-4">
-      <!-- 动画预览 -->
-      <AnimationPreview
-        v-if="spriteSheet.imageElement.value && currentAnimationFrames.length > 0"
-        :image-url="spriteSheet.imageUrl.value"
-        :image-width="spriteSheet.imageElement.value.naturalWidth"
-        :image-height="spriteSheet.imageElement.value.naturalHeight"
-        :frames="currentAnimationFrames"
-        :initial-fps="animationFps"
-        :loop="animationLoop"
-        :scale="2"
-        @fps-change="updateAnimationFps"
-      />
+      <!-- 雪碧图编辑器 -->
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-100 px-4 py-3">
+          <h3 class="text-sm font-semibold text-slate-700">雪碧图配置</h3>
+        </div>
+        <div class="p-4">
+          <SpriteEditor
+            :initial-config="currentCharacter?.sprite"
+            @change="handleSpriteConfigChange"
+            @frame-select="handleFrameSelect"
+          />
+        </div>
+      </div>
 
       <!-- 动画列表 -->
-      <div class="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2">
-          <span class="text-sm font-medium">动画列表</span>
-          <span class="text-xs text-gray-500">{{ animations.length }} 个</span>
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h3 class="text-sm font-semibold text-slate-700">动画列表</h3>
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+            {{ animations.length }} 个
+          </span>
         </div>
 
         <!-- 添加动画 -->
-        <div class="flex gap-2 border-b border-gray-100 p-2">
+        <div class="flex gap-2 border-b border-slate-100 p-3">
           <input
             v-model="newAnimationName"
             type="text"
             placeholder="动画名称"
-            class="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+            class="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-colors focus:border-indigo-300 focus:bg-white"
+            :disabled="!currentCharacter"
           />
           <button
-            class="rounded bg-green-500 px-3 py-1 text-sm text-white transition-colors hover:bg-green-600"
+            class="flex items-center gap-1 rounded-lg bg-indigo-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50"
+            :disabled="!currentCharacter"
             @click="addAnimation"
           >
+            <AddOutlined class="size-4" />
             添加
           </button>
         </div>
@@ -210,27 +292,26 @@ watch(animationLoop, (loop) => {
           <div
             v-for="(anim, index) in animations"
             :key="anim.key"
-            class="flex cursor-pointer items-center justify-between border-b border-gray-100 px-3 py-2 transition-colors hover:bg-gray-50"
-            :class="{ 'bg-blue-50': currentAnimationIndex === index }"
+            class="flex cursor-pointer items-center justify-between border-b border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50"
+            :class="{ 'bg-indigo-50': currentAnimationIndex === index }"
             @click="selectAnimation(index)"
           >
             <div class="flex items-center gap-2">
-              <span class="text-sm">{{ anim.key }}</span>
-              <span class="text-xs text-gray-400">({{ anim.frames.length }} 帧)</span>
+              <PlayArrowOutlined class="size-4 text-slate-400" />
+              <span class="text-sm font-medium text-slate-700">{{ anim.key }}</span>
+              <span class="text-xs text-slate-400">({{ anim.frames.length }} 帧)</span>
             </div>
             <button
-              class="rounded p-1 text-red-500 transition-colors hover:bg-red-50"
+              class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
               title="删除"
               @click.stop="deleteAnimation(index)"
             >
-              <svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-              </svg>
+              <DeleteOutlined class="size-4" />
             </button>
           </div>
 
-          <div v-if="animations.length === 0" class="p-4 text-center text-sm text-gray-400">
-            暂无动画，点击上方按钮添加
+          <div v-if="animations.length === 0" class="p-6 text-center text-sm text-slate-400">
+            {{ currentCharacter ? '暂无动画，点击上方按钮添加' : '请先选择或创建角色' }}
           </div>
         </div>
       </div>
@@ -238,29 +319,29 @@ watch(animationLoop, (loop) => {
       <!-- 当前动画帧编辑 -->
       <div
         v-if="currentAnimation"
-        class="rounded-lg border border-gray-200 bg-white"
+        class="rounded-xl border border-slate-200 bg-white shadow-sm"
       >
-        <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2">
-          <span class="text-sm font-medium">动画帧序列</span>
+        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h3 class="text-sm font-semibold text-slate-700">帧序列</h3>
           <button
-            class="text-xs text-red-500 hover:text-red-600"
+            class="text-xs text-red-500 transition-colors hover:text-red-600"
             @click="clearAnimationFrames"
           >
             清空
           </button>
         </div>
 
-        <div class="p-2">
+        <div class="p-4">
           <!-- 帧序列显示 -->
-          <div class="mb-2 flex flex-wrap gap-1">
+          <div class="mb-3 flex flex-wrap gap-1">
             <div
               v-for="(frameIndex, idx) in currentAnimation.frames"
               :key="idx"
-              class="group relative flex size-10 items-center justify-center rounded border border-gray-200 bg-gray-50 text-xs"
+              class="group relative flex size-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600"
             >
               {{ frameIndex }}
               <button
-                class="absolute -right-1 -top-1 hidden size-4 items-center justify-center rounded-full bg-red-500 text-white group-hover:flex"
+                class="absolute -right-1 -top-1 hidden size-4 items-center justify-center rounded-full bg-red-500 text-xs text-white group-hover:flex"
                 @click="removeFrameFromAnimation(frameIndex)"
               >
                 ×
@@ -268,31 +349,67 @@ watch(animationLoop, (loop) => {
             </div>
             <div
               v-if="currentAnimation.frames.length === 0"
-              class="w-full py-2 text-center text-xs text-gray-400"
+              class="w-full py-3 text-center text-xs text-slate-400"
             >
               点击左侧帧添加到动画
             </div>
           </div>
 
           <!-- 动画设置 -->
-          <div class="flex items-center gap-4 border-t border-gray-100 pt-2">
+          <div class="flex items-center gap-4 border-t border-slate-100 pt-3">
             <label class="flex items-center gap-2">
-              <span class="text-xs text-gray-500">FPS:</span>
+              <span class="text-xs text-slate-500">FPS:</span>
               <input
                 v-model.number="animationFps"
                 type="number"
                 min="1"
                 max="60"
-                class="w-14 rounded border border-gray-300 px-2 py-1 text-center text-xs"
+                class="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-center text-xs outline-none focus:border-indigo-300"
               />
             </label>
-            <label class="flex cursor-pointer items-center gap-1">
-              <input v-model="animationLoop" type="checkbox" class="size-3" />
-              <span class="text-xs text-gray-500">循环</span>
+            <label class="flex cursor-pointer items-center gap-2">
+              <input v-model="animationLoop" type="checkbox" class="size-3.5 rounded border-slate-300 text-indigo-500" />
+              <span class="text-xs text-slate-500">循环播放</span>
             </label>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+
+    <template #right>
+      <div class="flex h-full flex-col gap-4 p-4">
+        <!-- 动画预览 -->
+        <div class="flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <h3 class="text-sm font-semibold text-slate-700">动画预览</h3>
+            <button
+              class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 transition-colors hover:bg-slate-100"
+            >
+              <RefreshOutlined class="size-3.5" />
+              刷新
+            </button>
+          </div>
+          <div class="flex h-full items-center justify-center p-4">
+            <AnimationPreview
+              v-if="spriteSheet.imageElement.value && currentAnimationFrames.length > 0"
+              :image-url="spriteSheet.imageUrl.value"
+              :image-width="spriteSheet.imageElement.value.naturalWidth"
+              :image-height="spriteSheet.imageElement.value.naturalHeight"
+              :frames="currentAnimationFrames"
+              :initial-fps="animationFps"
+              :loop="animationLoop"
+              :scale="2"
+              @fps-change="updateAnimationFps"
+            />
+            <div v-else class="text-center text-slate-400">
+              <p class="mb-2">暂无预览</p>
+              <p class="text-xs">
+                {{ currentCharacter ? '请先上传雪碧图并选择动画帧' : '请先选择或创建角色' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </DesignerTabLayout>
 </template>

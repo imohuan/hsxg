@@ -1,385 +1,306 @@
 <script setup lang="ts">
 /**
  * @file 战斗操作菜单组件
- * 实现攻击、技能、物品、防御、逃跑、召唤菜单
- * Requirements: 2.2-2.9
+ * @description 提供攻击、技能、物品、防御、逃跑、召唤等操作选项
+ * 现代 SaaS 风格：亮色主题
  */
 import { ref, computed } from "vue";
+import {
+  GavelOutlined,
+  AutoFixHighOutlined,
+  LocalHospitalOutlined,
+  ShieldOutlined,
+  DirectionsRunOutlined,
+  GroupAddOutlined,
+  ArrowBackOutlined,
+} from "@vicons/material";
 import type { ActionType, UnitConfig } from "@/types";
 
-// ============ 类型定义 ============
+// ============ Props & Emits ============
 
-/** 菜单项 */
-interface MenuItem {
-  type: ActionType;
-  label: string;
-  icon: string;
-  disabled?: boolean;
-}
-
-/** 技能项 */
-interface SkillItem {
+interface SkillInfo {
   id: string;
   name: string;
   mpCost: number;
   description?: string;
 }
 
-/** 物品项 */
-interface ItemEntry {
+interface ItemInfo {
   id: string;
   name: string;
   count: number;
   description?: string;
 }
 
-/** 召唤项 */
-interface SummonItem {
+interface SummonInfo {
   id: string;
   name: string;
   description?: string;
 }
 
-// ============ Props & Emits ============
-
 const props = defineProps<{
-  /** 当前操作角色 */
   currentActor?: UnitConfig;
-  /** 可选目标列表 */
-  targets?: UnitConfig[];
-  /** 技能列表 */
-  skills?: SkillItem[];
-  /** 物品列表 */
-  items?: ItemEntry[];
-  /** 可召唤角色列表 */
-  summons?: SummonItem[];
-  /** 当前队伍人数 */
+  targets: UnitConfig[];
+  skills?: SkillInfo[];
+  items?: ItemInfo[];
+  summons?: SummonInfo[];
   teamSize?: number;
-  /** 是否禁用 */
   disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
-  /** 选择行动 */
   action: [type: ActionType, targetId?: string, skillId?: string, itemId?: string];
-  /** 取消选择 */
   cancel: [];
 }>();
 
 // ============ 状态 ============
 
-/** 当前菜单层级: main | target | skill | item | summon */
-type MenuLevel = "main" | "target" | "skill" | "item" | "summon";
-const menuLevel = ref<MenuLevel>("main");
+type MenuState = "main" | "target" | "skill" | "item" | "summon";
 
-/** 当前选择的行动类型 */
-const selectedAction = ref<ActionType | null>(null);
-
-/** 当前选择的技能/物品 ID */
+const menuState = ref<MenuState>("main");
+const pendingAction = ref<ActionType | null>(null);
 const selectedSkillId = ref<string | null>(null);
 const selectedItemId = ref<string | null>(null);
 
 // ============ 计算属性 ============
 
-/** 主菜单项 */
-const mainMenuItems = computed<MenuItem[]>(() => [
-  { type: "attack", label: "攻击", icon: "⚔️" },
-  { type: "skill", label: "技能", icon: "✨", disabled: !props.skills?.length },
-  { type: "item", label: "物品", icon: "🎒", disabled: !props.items?.length },
-  { type: "defend", label: "防御", icon: "🛡️" },
-  { type: "escape", label: "逃跑", icon: "🏃" },
-  {
-    type: "summon",
-    label: "召唤",
-    icon: "📜",
-    disabled: !props.summons?.length || (props.teamSize ?? 0) >= 6,
-  },
-]);
-
-/** 是否显示返回按钮 */
-const showBackButton = computed(() => menuLevel.value !== "main");
-
-/** 菜单标题 */
-const menuTitle = computed(() => {
-  switch (menuLevel.value) {
-    case "main":
-      return props.currentActor?.name ?? "选择行动";
-    case "target":
-      return "选择目标";
-    case "skill":
-      return "选择技能";
-    case "item":
-      return "选择物品";
-    case "summon":
-      return "选择召唤";
-    default:
-      return "";
-  }
+const canSummon = computed(() => {
+  return (props.teamSize ?? 0) < 6 && (props.summons?.length ?? 0) > 0;
 });
+
+// ============ 主菜单选项 ============
+
+const mainMenuItems = computed(() => [
+  { key: "attack", label: "攻击", icon: GavelOutlined, color: "text-red-500", bgColor: "bg-red-50 hover:bg-red-100" },
+  { key: "skill", label: "技能", icon: AutoFixHighOutlined, color: "text-purple-500", bgColor: "bg-purple-50 hover:bg-purple-100" },
+  { key: "item", label: "物品", icon: LocalHospitalOutlined, color: "text-emerald-500", bgColor: "bg-emerald-50 hover:bg-emerald-100" },
+  { key: "defend", label: "防御", icon: ShieldOutlined, color: "text-blue-500", bgColor: "bg-blue-50 hover:bg-blue-100" },
+  { key: "escape", label: "逃跑", icon: DirectionsRunOutlined, color: "text-amber-500", bgColor: "bg-amber-50 hover:bg-amber-100" },
+  { key: "summon", label: "召唤", icon: GroupAddOutlined, color: "text-indigo-500", bgColor: "bg-indigo-50 hover:bg-indigo-100", disabled: !canSummon.value },
+]);
 
 // ============ 方法 ============
 
-/** 选择主菜单项 */
-function selectMainAction(item: MenuItem): void {
-  if (item.disabled || props.disabled) return;
+function handleMainMenuClick(key: string): void {
+  if (props.disabled) return;
 
-  selectedAction.value = item.type;
-
-  switch (item.type) {
+  switch (key) {
     case "attack":
-      // 进入目标选择 (Requirements: 2.3)
-      menuLevel.value = "target";
+      pendingAction.value = "attack";
+      menuState.value = "target";
       break;
     case "skill":
-      // 显示技能列表 (Requirements: 2.4)
-      menuLevel.value = "skill";
+      menuState.value = "skill";
       break;
     case "item":
-      // 显示物品列表 (Requirements: 2.6)
-      menuLevel.value = "item";
+      menuState.value = "item";
       break;
     case "defend":
-      // 直接提交防御行动 (Requirements: 2.7)
       emit("action", "defend");
-      resetMenu();
       break;
     case "escape":
-      // 直接提交逃跑行动 (Requirements: 2.8)
       emit("action", "escape");
-      resetMenu();
       break;
     case "summon":
-      // 显示召唤列表 (Requirements: 2.9)
-      menuLevel.value = "summon";
+      if (canSummon.value) {
+        menuState.value = "summon";
+      }
       break;
   }
 }
 
-/** 选择技能 (Requirements: 2.5) */
-function selectSkill(skill: SkillItem): void {
-  if (props.disabled) return;
-
-  // 检查 MP 是否足够
-  const currentMp = props.currentActor?.stats.mp ?? 0;
-  if (currentMp < skill.mpCost) return;
-
-  selectedSkillId.value = skill.id;
-  // 进入目标选择
-  menuLevel.value = "target";
+function handleSkillSelect(skillId: string): void {
+  selectedSkillId.value = skillId;
+  pendingAction.value = "skill";
+  menuState.value = "target";
 }
 
-/** 选择物品 */
-function selectItem(item: ItemEntry): void {
-  if (props.disabled || item.count <= 0) return;
-
-  selectedItemId.value = item.id;
-  // 进入目标选择
-  menuLevel.value = "target";
+function handleItemSelect(itemId: string): void {
+  selectedItemId.value = itemId;
+  pendingAction.value = "item";
+  menuState.value = "target";
 }
 
-/** 选择召唤目标 */
-function selectSummon(summon: SummonItem): void {
-  if (props.disabled) return;
-
-  emit("action", "summon", undefined, summon.id);
-  resetMenu();
-}
-
-/** 选择攻击/技能/物品目标 */
-function selectTarget(target: UnitConfig): void {
-  if (props.disabled) return;
-
-  const action = selectedAction.value;
-  if (!action) return;
-
-  if (action === "skill" && selectedSkillId.value) {
-    emit("action", "skill", target.id, selectedSkillId.value);
-  } else if (action === "item" && selectedItemId.value) {
-    emit("action", "item", target.id, undefined, selectedItemId.value);
-  } else {
-    emit("action", action, target.id);
+function handleTargetSelect(targetId: string): void {
+  if (pendingAction.value) {
+    emit("action", pendingAction.value, targetId, selectedSkillId.value ?? undefined, selectedItemId.value ?? undefined);
   }
-
   resetMenu();
 }
 
-/** 返回上一级菜单 */
+function handleSummonSelect(summonId: string): void {
+  emit("action", "summon", undefined, summonId);
+  resetMenu();
+}
+
 function goBack(): void {
-  if (menuLevel.value === "target") {
-    // 如果是从技能/物品进入的目标选择，返回对应菜单
-    if (selectedSkillId.value) {
-      menuLevel.value = "skill";
-      selectedSkillId.value = null;
-    } else if (selectedItemId.value) {
-      menuLevel.value = "item";
-      selectedItemId.value = null;
+  if (menuState.value === "target") {
+    if (pendingAction.value === "skill") {
+      menuState.value = "skill";
+    } else if (pendingAction.value === "item") {
+      menuState.value = "item";
     } else {
-      menuLevel.value = "main";
+      menuState.value = "main";
     }
   } else {
-    menuLevel.value = "main";
+    menuState.value = "main";
   }
-  selectedAction.value = null;
-}
-
-/** 重置菜单状态 */
-function resetMenu(): void {
-  menuLevel.value = "main";
-  selectedAction.value = null;
+  pendingAction.value = null;
   selectedSkillId.value = null;
   selectedItemId.value = null;
 }
 
-/** 取消操作 */
-function handleCancel(): void {
-  emit("cancel");
-  resetMenu();
+function resetMenu(): void {
+  menuState.value = "main";
+  pendingAction.value = null;
+  selectedSkillId.value = null;
+  selectedItemId.value = null;
 }
-
-// ============ 暴露方法 ============
-
-defineExpose({
-  resetMenu,
-});
 </script>
 
 <template>
-  <div class="flex flex-col gap-2 rounded-lg bg-gray-800 p-4">
-    <!-- 菜单标题 -->
-    <div class="flex items-center justify-between border-b border-gray-700 pb-2">
-      <h3 class="text-lg font-bold text-white">{{ menuTitle }}</h3>
-      <button
-        v-if="showBackButton"
-        class="rounded px-2 py-1 text-sm text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
-        @click="goBack"
-      >
-        ← 返回
-      </button>
-    </div>
-
+  <div class="flex flex-col gap-3">
     <!-- 主菜单 -->
-    <div v-if="menuLevel === 'main'" class="grid grid-cols-3 gap-2">
+    <div v-if="menuState === 'main'" class="grid grid-cols-2 gap-2">
       <button
         v-for="item in mainMenuItems"
-        :key="item.type"
-        class="flex flex-col items-center gap-1 rounded-lg p-3 transition-all"
+        :key="item.key"
+        class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium transition-all"
         :class="[
-          item.disabled || disabled
-            ? 'cursor-not-allowed bg-gray-700 text-gray-500'
-            : 'bg-gray-700 text-white hover:bg-blue-600',
+          item.bgColor,
+          item.disabled ? 'cursor-not-allowed opacity-50' : '',
+          disabled ? 'pointer-events-none opacity-50' : ''
         ]"
         :disabled="item.disabled || disabled"
-        @click="selectMainAction(item)"
+        @click="handleMainMenuClick(item.key)"
       >
-        <span class="text-2xl">{{ item.icon }}</span>
-        <span class="text-sm">{{ item.label }}</span>
+        <component :is="item.icon" class="size-5" :class="item.color" />
+        <span class="text-slate-700">{{ item.label }}</span>
       </button>
-    </div>
-
-    <!-- 目标选择 -->
-    <div v-else-if="menuLevel === 'target'" class="flex flex-col gap-2">
-      <p class="text-sm text-gray-400">点击选择目标</p>
-      <div class="grid grid-cols-2 gap-2">
-        <button
-          v-for="target in targets"
-          :key="target.id"
-          class="flex items-center gap-2 rounded-lg bg-gray-700 p-3 text-white transition-colors hover:bg-red-600"
-          :disabled="disabled"
-          @click="selectTarget(target)"
-        >
-          <span class="text-lg">👤</span>
-          <div class="flex flex-col items-start">
-            <span class="text-sm font-medium">{{ target.name }}</span>
-            <span class="text-xs text-gray-400">
-              HP: {{ target.stats.hp }}/{{ target.stats.maxHp }}
-            </span>
-          </div>
-        </button>
-      </div>
     </div>
 
     <!-- 技能列表 -->
-    <div v-else-if="menuLevel === 'skill'" class="flex flex-col gap-2">
-      <div class="max-h-48 overflow-y-auto">
+    <div v-else-if="menuState === 'skill'" class="flex flex-col gap-2">
+      <div class="flex items-center gap-2 pb-2">
+        <button
+          class="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-500 transition-colors hover:bg-slate-100"
+          @click="goBack"
+        >
+          <ArrowBackOutlined class="size-4" />
+          返回
+        </button>
+        <span class="text-sm font-medium text-slate-700">选择技能</span>
+      </div>
+      <div class="flex flex-col gap-1">
         <button
           v-for="skill in skills"
           :key="skill.id"
-          class="flex w-full items-center justify-between rounded-lg p-3 transition-colors"
-          :class="[
-            (currentActor?.stats.mp ?? 0) < skill.mpCost
-              ? 'cursor-not-allowed bg-gray-700 text-gray-500'
-              : 'bg-gray-700 text-white hover:bg-purple-600',
-          ]"
-          :disabled="(currentActor?.stats.mp ?? 0) < skill.mpCost || disabled"
-          @click="selectSkill(skill)"
+          class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-purple-300 hover:bg-purple-50"
+          :disabled="(currentActor?.stats.mp ?? 0) < skill.mpCost"
+          :class="{ 'cursor-not-allowed opacity-50': (currentActor?.stats.mp ?? 0) < skill.mpCost }"
+          @click="handleSkillSelect(skill.id)"
         >
-          <div class="flex flex-col items-start">
-            <span class="font-medium">{{ skill.name }}</span>
-            <span v-if="skill.description" class="text-xs text-gray-400">
-              {{ skill.description }}
-            </span>
+          <div>
+            <div class="font-medium text-slate-700">{{ skill.name }}</div>
+            <div v-if="skill.description" class="text-xs text-slate-500">{{ skill.description }}</div>
           </div>
-          <span class="text-sm text-blue-400">MP {{ skill.mpCost }}</span>
+          <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-600">
+            MP {{ skill.mpCost }}
+          </span>
         </button>
       </div>
     </div>
 
     <!-- 物品列表 -->
-    <div v-else-if="menuLevel === 'item'" class="flex flex-col gap-2">
-      <div class="max-h-48 overflow-y-auto">
+    <div v-else-if="menuState === 'item'" class="flex flex-col gap-2">
+      <div class="flex items-center gap-2 pb-2">
+        <button
+          class="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-500 transition-colors hover:bg-slate-100"
+          @click="goBack"
+        >
+          <ArrowBackOutlined class="size-4" />
+          返回
+        </button>
+        <span class="text-sm font-medium text-slate-700">选择物品</span>
+      </div>
+      <div class="flex flex-col gap-1">
         <button
           v-for="item in items"
           :key="item.id"
-          class="flex w-full items-center justify-between rounded-lg p-3 transition-colors"
-          :class="[
-            item.count <= 0
-              ? 'cursor-not-allowed bg-gray-700 text-gray-500'
-              : 'bg-gray-700 text-white hover:bg-green-600',
-          ]"
-          :disabled="item.count <= 0 || disabled"
-          @click="selectItem(item)"
+          class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50"
+          :disabled="item.count <= 0"
+          :class="{ 'cursor-not-allowed opacity-50': item.count <= 0 }"
+          @click="handleItemSelect(item.id)"
         >
-          <div class="flex flex-col items-start">
-            <span class="font-medium">{{ item.name }}</span>
-            <span v-if="item.description" class="text-xs text-gray-400">
-              {{ item.description }}
-            </span>
+          <div>
+            <div class="font-medium text-slate-700">{{ item.name }}</div>
+            <div v-if="item.description" class="text-xs text-slate-500">{{ item.description }}</div>
           </div>
-          <span class="text-sm text-yellow-400">x{{ item.count }}</span>
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            ×{{ item.count }}
+          </span>
         </button>
       </div>
     </div>
 
     <!-- 召唤列表 -->
-    <div v-else-if="menuLevel === 'summon'" class="flex flex-col gap-2">
-      <p class="text-sm text-gray-400">
-        当前队伍: {{ teamSize ?? 0 }}/6
-      </p>
-      <div class="max-h-48 overflow-y-auto">
+    <div v-else-if="menuState === 'summon'" class="flex flex-col gap-2">
+      <div class="flex items-center gap-2 pb-2">
+        <button
+          class="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-500 transition-colors hover:bg-slate-100"
+          @click="goBack"
+        >
+          <ArrowBackOutlined class="size-4" />
+          返回
+        </button>
+        <span class="text-sm font-medium text-slate-700">选择召唤</span>
+      </div>
+      <div class="flex flex-col gap-1">
         <button
           v-for="summon in summons"
           :key="summon.id"
-          class="flex w-full items-center gap-2 rounded-lg bg-gray-700 p-3 text-white transition-colors hover:bg-orange-600"
-          :disabled="disabled"
-          @click="selectSummon(summon)"
+          class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50"
+          @click="handleSummonSelect(summon.id)"
         >
-          <span class="text-lg">📜</span>
-          <div class="flex flex-col items-start">
-            <span class="font-medium">{{ summon.name }}</span>
-            <span v-if="summon.description" class="text-xs text-gray-400">
-              {{ summon.description }}
-            </span>
+          <div>
+            <div class="font-medium text-slate-700">{{ summon.name }}</div>
+            <div v-if="summon.description" class="text-xs text-slate-500">{{ summon.description }}</div>
           </div>
         </button>
       </div>
     </div>
 
-    <!-- 取消按钮 -->
-    <button
-      class="mt-2 rounded-lg bg-gray-600 py-2 text-white transition-colors hover:bg-gray-500"
-      @click="handleCancel"
-    >
-      取消
-    </button>
+    <!-- 目标选择 -->
+    <div v-else-if="menuState === 'target'" class="flex flex-col gap-2">
+      <div class="flex items-center gap-2 pb-2">
+        <button
+          class="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-500 transition-colors hover:bg-slate-100"
+          @click="goBack"
+        >
+          <ArrowBackOutlined class="size-4" />
+          返回
+        </button>
+        <span class="text-sm font-medium text-slate-700">选择目标</span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <button
+          v-for="target in targets"
+          :key="target.id"
+          class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-red-300 hover:bg-red-50"
+          @click="handleTargetSelect(target.id)"
+        >
+          <div class="font-medium text-slate-700">{{ target.name }}</div>
+          <div class="flex items-center gap-2">
+            <div class="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
+              <div
+                class="h-full bg-red-500"
+                :style="{ width: `${(target.stats.hp / target.stats.maxHp) * 100}%` }"
+              />
+            </div>
+            <span class="text-xs text-slate-500">{{ target.stats.hp }}/{{ target.stats.maxHp }}</span>
+          </div>
+        </button>
+      </div>
+    </div>
   </div>
 </template>

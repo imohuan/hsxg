@@ -1,9 +1,14 @@
 <script setup lang="ts">
-// JSON 配置标签页 - 占位组件
+/**
+ * @file JSON 配置标签页
+ * @description 整合 JSON 配置面板，提供配置数据的导入导出和编辑功能
+ * Requirements: 6.1-6.5
+ */
+import JsonPanel from "../components/JsonPanel.vue";
 </script>
 
 <template>
-  <div class="flex h-full items-center justify-center">
-    <p class="text-gray-500">JSON 配置 - 待实现</p>
+  <div class="h-full w-full overflow-hidden bg-slate-100 p-4">
+    <JsonPanel />
   </div>
 </template>

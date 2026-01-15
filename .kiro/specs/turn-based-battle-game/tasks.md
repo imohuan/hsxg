@@ -73,10 +73,13 @@
     - 实现操作阶段、执行阶段切换
     - 实现 60 秒倒计时
     - _Requirements: 2.1, 2.10, 2.11_
-  - [ ]* 4.4 编写角色激活顺序属性测试
+  - [x] 4.4 编写角色激活顺序属性测试
+
     - **Property 3: 角色激活顺序正确性**
     - **Validates: Requirements 2.1**
-  - [ ]* 4.5 编写召唤限制属性测试
+
+  - [x] 4.5 编写召唤限制属性测试
+
     - **Property 4: 召唤数量限制**
     - **Validates: Requirements 2.9**
   - [x] 4.6 实现战斗页面 (BattlePage)
@@ -84,7 +87,7 @@
     - 整合画布、菜单、HUD 组件
     - _Requirements: 1.1-3.9_
 
-- [ ] 5. 检查点 - 战斗界面功能验证
+- [x] 5. 检查点 - 战斗界面功能验证
   - 确保所有测试通过，如有问题请询问用户
 
 - [x] 6. 设计工坊 - 雪碧图编辑器
@@ -92,7 +95,8 @@
     - 创建 `src/modules/designer/composables/useSpriteSheet.ts`
     - 实现图片加载、网格切割、帧序列生成
     - _Requirements: 4.1, 4.2_
-  - [ ]* 6.2 编写雪碧图切割属性测试
+  - [x] 6.2 编写雪碧图切割属性测试
+
     - **Property 7: 雪碧图帧切割正确性**
     - **Validates: Requirements 4.2**
   - [x] 6.3 实现雪碧图编辑器组件 (SpriteEditor)
@@ -104,22 +108,22 @@
     - 实现动画播放、帧率调整
     - _Requirements: 4.3, 4.4_
 
-- [ ] 7. 设计工坊 - 角色与特效编辑
-  - [ ] 7.1 实现角色编辑面板 (CharacterPanel)
+- [x] 7. 设计工坊 - 角色与特效编辑
+  - [x] 7.1 实现角色编辑面板 (CharacterPanel)
     - 创建 `src/modules/designer/components/CharacterPanel.vue`
     - 实现角色创建、动画配置、保存
     - _Requirements: 4.5, 4.6, 4.7_
-  - [ ] 7.2 实现特效编辑面板 (EffectPanel)
+  - [x] 7.2 实现特效编辑面板 (EffectPanel)
     - 创建 `src/modules/designer/components/EffectPanel.vue`
     - 实现特效创建、参数配置、保存
     - _Requirements: 5.1-5.5_
-  - [ ] 7.3 实现设计器 Store (designer.store)
+  - [x] 7.3 实现设计器 Store (designer.store)
     - 完善 `src/stores/designer.store.ts`
     - 实现角色、特效、技能的 CRUD 操作
     - _Requirements: 4.5-4.7, 5.1-5.5_
 
-- [ ] 8. 设计工坊 - JSON 配置管理
-  - [ ] 8.1 实现配置 Store (config.store)
+- [x] 8. 设计工坊 - JSON 配置管理
+  - [x] 8.1 实现配置 Store (config.store)
     - 完善 `src/stores/config.store.ts`
     - 实现序列化、反序列化、localStorage 存储
     - _Requirements: 6.1-6.5, 10.1-10.5_
@@ -129,7 +133,7 @@
   - [ ]* 8.3 编写数据验证属性测试
     - **Property 14: 数据验证正确性**
     - **Validates: Requirements 6.3, 10.5**
-  - [ ] 8.4 实现 JSON 配置面板 (JsonPanel)
+  - [x] 8.4 实现 JSON 配置面板 (JsonPanel)
     - 创建 `src/modules/designer/components/JsonPanel.vue`
     - 实现导入、导出、验证功能
     - _Requirements: 6.1-6.4_
@@ -137,15 +141,15 @@
 - [ ] 9. 检查点 - 设计工坊功能验证
   - 确保所有测试通过，如有问题请询问用户
 
-- [ ] 10. 时间轴编辑器 - 核心功能
-  - [ ] 10.1 实现时间轴核心逻辑 (useTimeline)
+- [x] 10. 时间轴编辑器 - 核心功能
+  - [x] 10.1 实现时间轴核心逻辑 (useTimeline)
     - 创建 `src/modules/timeline/composables/useTimeline.ts`
     - 实现轨道管理、片段管理、时间计算
     - _Requirements: 7.1-7.8_
   - [ ]* 10.2 编写轨道不重叠属性测试
     - **Property 9: 时间轴轨道不重叠约束**
     - **Validates: Requirements 7.7**
-  - [ ] 10.3 实现拖拽逻辑 (useDragDrop)
+  - [x] 10.3 实现拖拽逻辑 (useDragDrop)
     - 创建 `src/modules/timeline/composables/useDragDrop.ts`
     - 实现片段拖拽、缩放、吸附
     - _Requirements: 7.3-7.6_
@@ -156,44 +160,44 @@
     - **Property 11: 吸附逻辑正确性**
     - **Validates: Requirements 7.6**
 
-- [ ] 11. 时间轴编辑器 - UI 组件
-  - [ ] 11.1 实现时间刻度尺组件 (TimelineRuler)
+- [x] 11. 时间轴编辑器 - UI 组件
+  - [x] 11.1 实现时间刻度尺组件 (TimelineRuler)
     - 创建 `src/modules/timeline/components/TimelineRuler.vue`
     - 实现时间刻度显示、缩放
     - _Requirements: 7.1, 9.8_
   - [ ]* 11.2 编写时间轴缩放属性测试
     - **Property 12: 时间轴缩放正确性**
     - **Validates: Requirements 9.8**
-  - [ ] 11.3 实现轨道组件 (TimelineTrack)
+  - [x] 11.3 实现轨道组件 (TimelineTrack)
     - 创建 `src/modules/timeline/components/TimelineTrack.vue`
     - 实现轨道显示、锁定、隐藏
     - _Requirements: 7.2_
-  - [ ] 11.4 实现片段组件 (TimelineSegment)
+  - [x] 11.4 实现片段组件 (TimelineSegment)
     - 创建 `src/modules/timeline/components/TimelineSegment.vue`
     - 实现片段显示、选中、删除
     - _Requirements: 7.3, 7.8_
-  - [ ] 11.5 实现步骤编辑器 (StepEditor)
+  - [x] 11.5 实现步骤编辑器 (StepEditor)
     - 创建 `src/modules/timeline/components/StepEditor.vue`
     - 实现各类步骤的参数编辑
     - _Requirements: 8.1-8.8_
-  - [ ] 11.6 实现时间轴主组件 (Timeline)
+  - [x] 11.6 实现时间轴主组件 (Timeline)
     - 创建 `src/modules/timeline/components/Timeline.vue`
     - 整合刻度尺、轨道、片段组件
     - _Requirements: 7.1-7.8_
 
-- [ ] 12. 时间轴编辑器 - 预览功能
-  - [ ] 12.1 实现预览播放逻辑 (usePreview)
+- [x] 12. 时间轴编辑器 - 预览功能
+  - [x] 12.1 实现预览播放逻辑 (usePreview)
     - 创建 `src/modules/timeline/composables/usePreview.ts`
     - 实现播放、暂停、跳转
     - _Requirements: 9.1-9.4_
   - [ ]* 12.2 编写预览同步属性测试
     - **Property 13: 预览播放同步正确性**
     - **Validates: Requirements 9.2, 9.3**
-  - [ ] 12.3 实现步骤执行器 (StepExecutor)
+  - [x] 12.3 实现步骤执行器 (StepExecutor)
     - 创建 `src/modules/timeline/core/StepExecutor.ts`
     - 实现移动、伤害、特效、等待、镜头、震动、背景步骤
     - _Requirements: 8.1-8.7_
-  - [ ] 12.4 实现预览画布组件
+  - [x] 12.4 实现预览画布组件
     - 在时间轴编辑器中集成 Phaser 预览画布
     - 实现攻击方/被攻击方配置
     - _Requirements: 9.5-9.7_
@@ -201,24 +205,24 @@
 - [ ] 13. 检查点 - 时间轴编辑器功能验证
   - 确保所有测试通过，如有问题请询问用户
 
-- [ ] 14. 设计工坊页面整合
-  - [ ] 14.1 实现设计工坊主页 (DesignerPage)
+- [x] 14. 设计工坊页面整合
+  - [x] 14.1 实现设计工坊主页 (DesignerPage)
     - 创建 `src/modules/designer/pages/DesignerPage.vue`
     - 实现标签页导航
     - _Requirements: 11.2-11.6_
-  - [ ] 14.2 实现角色标签页 (CharacterTab)
+  - [x] 14.2 实现角色标签页 (CharacterTab)
     - 创建 `src/modules/designer/pages/CharacterTab.vue`
     - 整合雪碧图编辑器和角色面板
     - _Requirements: 4.1-4.8_
-  - [ ] 14.3 实现特效标签页 (EffectTab)
+  - [x] 14.3 实现特效标签页 (EffectTab)
     - 创建 `src/modules/designer/pages/EffectTab.vue`
     - 整合雪碧图编辑器和特效面板
     - _Requirements: 5.1-5.5_
-  - [ ] 14.4 实现技能标签页 (SkillTab)
+  - [x] 14.4 实现技能标签页 (SkillTab)
     - 创建 `src/modules/designer/pages/SkillTab.vue`
     - 整合时间轴编辑器和预览功能
     - _Requirements: 7.1-9.8_
-  - [ ] 14.5 实现 JSON 标签页 (JsonTab)
+  - [x] 14.5 实现 JSON 标签页 (JsonTab)
     - 创建 `src/modules/designer/pages/JsonTab.vue`
     - 整合 JSON 配置面板
     - _Requirements: 6.1-6.5_
