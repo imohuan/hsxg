@@ -1,22 +1,22 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { ref } from "vue";
+import { ref, type Ref } from "vue";
 import { useTimeline } from "./useTimeline";
 import type { TimelineSegment, TimelineTrack, SkillStep } from "@/types";
 
 describe("useTimeline", () => {
   // 测试数据
-  let fps: ReturnType<typeof ref<number>>;
-  let totalFrames: ReturnType<typeof ref<number>>;
-  let segments: ReturnType<typeof ref<TimelineSegment[]>>;
-  let tracks: ReturnType<typeof ref<TimelineTrack[]>>;
-  let steps: ReturnType<typeof ref<SkillStep[]>>;
+  let fps: Ref<number>;
+  let totalFrames: Ref<number>;
+  let segments: Ref<TimelineSegment[]>;
+  let tracks: Ref<TimelineTrack[]>;
+  let steps: Ref<SkillStep[]>;
 
   beforeEach(() => {
-    fps = ref(30);
-    totalFrames = ref(300);
-    segments = ref([]);
-    tracks = ref([]);
-    steps = ref([]);
+    fps = ref(30) as Ref<number>;
+    totalFrames = ref(300) as Ref<number>;
+    segments = ref<TimelineSegment[]>([]) as Ref<TimelineSegment[]>;
+    tracks = ref<TimelineTrack[]>([]) as Ref<TimelineTrack[]>;
+    steps = ref<SkillStep[]>([]) as Ref<SkillStep[]>;
     vi.useFakeTimers();
   });
 
@@ -107,7 +107,6 @@ describe("useTimeline", () => {
     });
   });
 
-
   // ============ 轨道管理测试 ============
 
   describe("轨道管理", () => {
@@ -116,7 +115,7 @@ describe("useTimeline", () => {
       const track = timeline.addTrack("测试轨道");
       expect(track.name).toBe("测试轨道");
       expect(tracks.value).toHaveLength(1);
-      expect(tracks.value[0]).toStrictEqual(track);
+      expect(tracks.value?.[0]).toStrictEqual(track);
     });
 
     it("addTrack 无参数时应使用默认名称", () => {

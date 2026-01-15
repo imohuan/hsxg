@@ -56,7 +56,6 @@ export interface UseTimelineReturn {
   getTrackSegments: (trackId: string) => TimelineSegment[];
 }
 
-
 /** 默认片段持续时间（帧数） */
 const DEFAULT_SEGMENT_DURATION = 30;
 
@@ -208,15 +207,8 @@ export function useTimeline(options: UseTimelineOptions): UseTimelineReturn {
    * 检查片段是否与同轨道其他片段重叠
    * @returns true 表示有重叠
    */
-  function checkOverlap(
-    trackId: string,
-    startFrame: number,
-    endFrame: number,
-    excludeSegmentId?: string,
-  ): boolean {
-    const trackSegments = getTrackSegments(trackId).filter(
-      (s) => s.id !== excludeSegmentId,
-    );
+  function checkOverlap(trackId: string, startFrame: number, endFrame: number, excludeSegmentId?: string): boolean {
+    const trackSegments = getTrackSegments(trackId).filter((s) => s.id !== excludeSegmentId);
 
     for (const segment of trackSegments) {
       // 检查是否重叠：两个区间重叠的条件是 !(A.end <= B.start || B.end <= A.start)
@@ -227,7 +219,6 @@ export function useTimeline(options: UseTimelineOptions): UseTimelineReturn {
     }
     return false;
   }
-
 
   /**
    * 添加片段到轨道
@@ -258,7 +249,7 @@ export function useTimeline(options: UseTimelineOptions): UseTimelineReturn {
 
     const segment: TimelineSegment = {
       id: generateId("seg"),
-      stepId: step.id,
+      stepId: step.id || generateId("step"),
       trackId,
       startFrame,
       endFrame,
@@ -272,11 +263,7 @@ export function useTimeline(options: UseTimelineOptions): UseTimelineReturn {
    * 更新片段的时间范围
    * @returns true 表示更新成功，false 表示有重叠或无效
    */
-  function updateSegment(
-    segmentId: string,
-    startFrame: number,
-    endFrame: number,
-  ): boolean {
+  function updateSegment(segmentId: string, startFrame: number, endFrame: number): boolean {
     const segment = segments.value.find((s) => s.id === segmentId);
     if (!segment) {
       return false;

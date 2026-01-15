@@ -5,13 +5,7 @@
  * Requirements: 4.5, 4.6, 4.7
  */
 import { ref, computed, watch } from "vue";
-import {
-  AddOutlined,
-  DeleteOutlined,
-  SaveOutlined,
-  EditOutlined,
-  PersonOutlined,
-} from "@vicons/material";
+import { AddOutlined, DeleteOutlined, SaveOutlined, EditOutlined, PersonOutlined } from "@vicons/material";
 import { useDesignerStore } from "@/stores/designer.store";
 import type { CharacterConfig, SpriteConfig, AnimationConfig } from "@/types";
 
@@ -223,16 +217,14 @@ watch(
           </div>
 
           <!-- 角色信息 -->
-          <div class="flex-1 min-w-0">
+          <div class="min-w-0 flex-1">
             <p
               class="truncate text-sm font-medium"
               :class="designerStore.currentCharacterId === character.id ? 'text-indigo-700' : 'text-slate-700'"
             >
               {{ character.name }}
             </p>
-            <p class="text-xs text-slate-400">
-              {{ character.animations.length }} 个动画
-            </p>
+            <p class="text-xs text-slate-400">{{ character.animations.length }} 个动画</p>
           </div>
 
           <!-- 操作按钮 -->
@@ -290,7 +282,7 @@ watch(
         <div class="rounded-lg bg-white p-2">
           <span class="text-slate-500">雪碧图:</span>
           <span class="ml-1 text-slate-700">
-            {{ currentCharacter.sprite.url ? '已配置' : '未配置' }}
+            {{ currentCharacter.sprite.url ? "已配置" : "未配置" }}
           </span>
         </div>
         <div class="rounded-lg bg-white p-2">
@@ -316,7 +308,7 @@ watch(
               v-model="newCharacterName"
               type="text"
               placeholder="输入角色名称"
-              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition-colors focus:border-indigo-300 focus:bg-white"
+              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm transition-colors outline-none focus:border-indigo-300 focus:bg-white"
               autofocus
               @keydown.enter="createCharacter"
             />

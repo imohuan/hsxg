@@ -27,15 +27,15 @@ const emit = defineEmits<{
   dragStart: [segmentId: string, mode: "move" | "resize-start" | "resize-end", event: MouseEvent];
 }>();
 
-// 步骤类型颜色映射
+// 步骤类型颜色映射（亮色 SaaS 风格）
 const stepTypeColors: Record<StepType, string> = {
-  move: "bg-blue-600",
-  damage: "bg-red-600",
-  effect: "bg-purple-600",
-  wait: "bg-gray-600",
-  camera: "bg-green-600",
-  shake: "bg-orange-600",
-  background: "bg-cyan-600",
+  move: "bg-indigo-500",
+  damage: "bg-rose-500",
+  effect: "bg-violet-500",
+  wait: "bg-slate-400",
+  camera: "bg-emerald-500",
+  shake: "bg-amber-500",
+  background: "bg-cyan-500",
 };
 
 // 步骤类型名称映射
@@ -53,7 +53,7 @@ const stepTypeNames: Record<StepType, string> = {
 const segmentStyle = computed(() => {
   const left = props.frameToPx(props.segment.startFrame);
   const width = props.frameToPx(props.segment.endFrame - props.segment.startFrame);
-  
+
   return {
     left: `${left}px`,
     width: `${Math.max(width, 20)}px`, // 最小宽度 20px
@@ -108,11 +108,11 @@ function handleResizeEndStart(event: MouseEvent) {
 
 <template>
   <div
-    class="group absolute top-1 bottom-1 flex cursor-pointer items-center overflow-hidden rounded border-2 transition-colors"
+    class="group absolute top-1 bottom-1 flex cursor-pointer items-center overflow-hidden rounded-md shadow-sm transition-all"
     :class="[
       bgColorClass,
-      selected ? 'border-white shadow-lg' : 'border-transparent',
-      disabled ? 'cursor-not-allowed opacity-50' : 'hover:brightness-110',
+      selected ? 'shadow-md ring-2 ring-indigo-400 ring-offset-1' : '',
+      disabled ? 'cursor-not-allowed opacity-50' : 'hover:shadow-md hover:brightness-105',
     ]"
     :style="segmentStyle"
     @click="handleSelect"
@@ -120,28 +120,28 @@ function handleResizeEndStart(event: MouseEvent) {
   >
     <!-- 左侧调整手柄 -->
     <div
-      class="absolute left-0 top-0 h-full w-2 cursor-ew-resize bg-black/20 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-50"
+      class="absolute top-0 left-0 h-full w-1.5 cursor-ew-resize bg-white/30 opacity-0 transition-opacity group-hover:opacity-60 hover:opacity-100"
       @mousedown="handleResizeStartStart"
     />
-    
+
     <!-- 内容区域 -->
-    <div class="flex flex-1 items-center justify-between px-2 text-xs text-white">
+    <div class="flex flex-1 items-center justify-between px-2.5 text-xs font-medium text-white">
       <span class="truncate">{{ stepName }}</span>
-      
+
       <!-- 删除按钮 -->
       <button
         v-if="selected && !disabled"
-        class="ml-1 shrink-0 rounded p-0.5 hover:bg-black/30"
+        class="ml-1 shrink-0 rounded p-0.5 transition-colors hover:bg-white/20"
         title="删除片段"
         @click="handleDelete"
       >
         <DeleteOutlined class="size-3" />
       </button>
     </div>
-    
+
     <!-- 右侧调整手柄 -->
     <div
-      class="absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-black/20 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-50"
+      class="absolute top-0 right-0 h-full w-1.5 cursor-ew-resize bg-white/30 opacity-0 transition-opacity group-hover:opacity-60 hover:opacity-100"
       @mousedown="handleResizeEndStart"
     />
   </div>

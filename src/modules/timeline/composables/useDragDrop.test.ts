@@ -1,27 +1,30 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { ref } from "vue";
-import { useDragDrop, type DragMode } from "./useDragDrop";
+import { ref, type Ref } from "vue";
+import { useDragDrop } from "./useDragDrop";
 import type { TimelineSegment } from "@/types";
+
+// mock 函数类型
+type UpdateSegmentFn = (segmentId: string, startFrame: number, endFrame: number) => boolean;
 
 describe("useDragDrop", () => {
   // 测试数据
-  let currentFrame: ReturnType<typeof ref<number>>;
-  let fps: ReturnType<typeof ref<number>>;
-  let segments: ReturnType<typeof ref<TimelineSegment[]>>;
-  let updateSegmentMock: ReturnType<typeof vi.fn>;
+  let currentFrame: Ref<number>;
+  let fps: Ref<number>;
+  let segments: Ref<TimelineSegment[]>;
+  let updateSegmentMock: UpdateSegmentFn;
 
   // 像素与帧的转换（简化：1帧 = 10像素）
   const pxToFrame = (px: number) => Math.round(px / 10);
   const frameToPx = (frame: number) => frame * 10;
 
   beforeEach(() => {
-    currentFrame = ref(0);
-    fps = ref(30);
-    segments = ref([
+    currentFrame = ref(0) as Ref<number>;
+    fps = ref(30) as Ref<number>;
+    segments = ref<TimelineSegment[]>([
       { id: "seg1", stepId: "step1", trackId: "track1", startFrame: 0, endFrame: 30 },
       { id: "seg2", stepId: "step2", trackId: "track1", startFrame: 60, endFrame: 90 },
-    ]);
-    updateSegmentMock = vi.fn().mockReturnValue(true);
+    ]) as Ref<TimelineSegment[]>;
+    updateSegmentMock = vi.fn((_segmentId: string, _startFrame: number, _endFrame: number) => true);
   });
 
   afterEach(() => {
@@ -47,9 +50,7 @@ describe("useDragDrop", () => {
     it("snapPoints 应包含时间指示器位置", () => {
       currentFrame.value = 50;
       const dragDrop = createDragDrop();
-      const indicatorPoint = dragDrop.snapPoints.value.find(
-        (p) => p.type === "indicator" && p.frame === 50,
-      );
+      const indicatorPoint = dragDrop.snapPoints.value.find((p) => p.type === "indicator" && p.frame === 50);
       expect(indicatorPoint).toBeDefined();
     });
 
@@ -107,7 +108,6 @@ describe("useDragDrop", () => {
       expect(snappedFrame).toBe(45);
     });
   });
-
 
   // ============ 拖拽状态测试 ============
 
@@ -201,7 +201,9 @@ describe("useDragDrop", () => {
 
       // 起始位置应该被限制为 0
       expect(updateSegmentMock).toHaveBeenCalled();
-      const [, startFrame] = updateSegmentMock.mock.calls[0];
+      const mockFn = updateSegmentMock as unknown as ReturnType<typeof vi.fn>;
+      const call = mockFn.mock.calls[0] as [string, number, number] | undefined;
+      const startFrame = call?.[1] ?? 0;
       expect(startFrame).toBeGreaterThanOrEqual(0);
     });
 
@@ -215,8 +217,12 @@ describe("useDragDrop", () => {
 
       // startFrame 应该被限制为 endFrame - 1 = 29
       expect(updateSegmentMock).toHaveBeenCalled();
-      const [, startFrame, endFrame] = updateSegmentMock.mock.calls[0];
-      expect(startFrame).toBeLessThan(endFrame);
+      const mockFn = updateSegmentMock as unknown as ReturnType<typeof vi.fn>;
+      const call = mockFn.mock.calls[0] as [string, number, number] | undefined;
+      if (call) {
+        const [, startFrame, endFrame] = call;
+        expect(startFrame).toBeLessThan(endFrame);
+      }
     });
 
     it("resize-end 不应使 endFrame <= startFrame", () => {
@@ -229,8 +235,12 @@ describe("useDragDrop", () => {
 
       // endFrame 应该被限制为 startFrame + 1 = 1
       expect(updateSegmentMock).toHaveBeenCalled();
-      const [, startFrame, endFrame] = updateSegmentMock.mock.calls[0];
-      expect(endFrame).toBeGreaterThan(startFrame);
+      const mockFn = updateSegmentMock as unknown as ReturnType<typeof vi.fn>;
+      const call = mockFn.mock.calls[0] as [string, number, number] | undefined;
+      if (call) {
+        const [, startFrame, endFrame] = call;
+        expect(endFrame).toBeGreaterThan(startFrame);
+      }
     });
   });
 

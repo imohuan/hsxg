@@ -1,0 +1,23 @@
+<svg width="320" height="200" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+    <style>
+      .title { font: 700 20px 'Segoe UI', 'PingFang SC', sans-serif; fill: #dc2626; }
+      .text { font: 13px 'Segoe UI', 'PingFang SC', sans-serif; fill: #64748b; }
+    </style>
+  </defs>
+  <rect width="320" height="200" rx="16" ry="16" fill="url(#bg)" stroke="#e2e8f0" stroke-width="2" />
+  <g transform="translate(24,40)">
+    <path d="M0 80 L40 0 L80 80 Z" fill="none" stroke="#f97316" stroke-width="6"
+      stroke-linejoin="round" />
+    <line x1="40" y1="30" x2="40" y2="55" stroke="#dc2626" stroke-width="6" stroke-linecap="round" />
+    <circle cx="40" cy="68" r="4" fill="#dc2626" />
+  </g>
+  <text class="title" x="120" y="70">资源加载失败</text>
+  <text class="text" x="120" y="100">请检查图片 URL 是否正确</text>
+  <text class="text" x="120" y="124">或文件是否允许跨域访问</text>
+  <text class="text" x="120" y="148">将显示最近失败的 URL</text>
+</svg>

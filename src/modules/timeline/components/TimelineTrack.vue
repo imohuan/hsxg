@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { LockOutlined, LockOpenOutlined, VisibilityOutlined, VisibilityOffOutlined, DeleteOutlined } from "@vicons/material";
+import {
+  LockOutlined,
+  LockOpenOutlined,
+  VisibilityOutlined,
+  VisibilityOffOutlined,
+  DeleteOutlined,
+} from "@vicons/material";
 import type { TimelineTrack, TimelineSegment } from "@/types";
 
 // Props
@@ -38,7 +44,7 @@ const trackStyle = computed(() => ({
 // 计算内容区域样式
 const contentStyle = computed(() => ({
   width: `${props.totalWidth}px`,
-  pointerEvents: props.track.locked ? "none" as const : "auto" as const,
+  pointerEvents: props.track.locked ? ("none" as const) : ("auto" as const),
 }));
 
 // 切换锁定
@@ -66,53 +72,50 @@ function handleNameChange(event: Event) {
 </script>
 
 <template>
-  <div
-    class="flex border-b border-gray-700"
-    :style="trackStyle"
-  >
+  <div class="flex border-b border-slate-200" :style="trackStyle">
     <!-- 轨道信息区域 -->
-    <div class="flex w-40 shrink-0 items-center gap-1 border-r border-gray-700 bg-gray-800 px-2">
+    <div class="flex w-44 shrink-0 items-center gap-2 border-r border-slate-200 bg-slate-50 px-3">
+      <!-- 轨道指示条 -->
+      <div class="h-4 w-1 shrink-0 rounded-full" :class="track.hidden ? 'bg-slate-300' : 'bg-indigo-500'" />
+
       <!-- 轨道名称 -->
       <input
         type="text"
         :value="track.name"
-        class="w-full truncate bg-transparent text-sm text-gray-300 outline-none focus:bg-gray-700"
+        class="w-full truncate bg-transparent text-sm font-medium text-slate-700 transition-colors outline-none focus:text-indigo-600"
+        :class="{ 'text-slate-400 line-through': track.hidden, 'text-amber-600': track.locked }"
         :disabled="track.locked"
         @change="handleNameChange"
       />
-      
+
       <!-- 操作按钮 -->
-      <div class="flex shrink-0 items-center gap-0.5">
+      <div
+        class="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100"
+      >
         <!-- 锁定按钮 -->
         <button
-          class="rounded p-0.5 hover:bg-gray-700"
-          :class="track.locked ? 'text-yellow-500' : 'text-gray-500'"
+          class="rounded p-1 transition-colors hover:bg-slate-200"
+          :class="track.locked ? 'text-amber-500' : 'text-slate-400'"
           :title="track.locked ? '解锁轨道' : '锁定轨道'"
           @click="handleToggleLock"
         >
-          <component
-            :is="track.locked ? LockOutlined : LockOpenOutlined"
-            class="size-4"
-          />
+          <component :is="track.locked ? LockOutlined : LockOpenOutlined" class="size-4" />
         </button>
-        
+
         <!-- 隐藏按钮 -->
         <button
-          class="rounded p-0.5 hover:bg-gray-700"
-          :class="track.hidden ? 'text-gray-600' : 'text-gray-500'"
+          class="rounded p-1 transition-colors hover:bg-slate-200"
+          :class="track.hidden ? 'text-slate-300' : 'text-slate-400'"
           :title="track.hidden ? '显示轨道' : '隐藏轨道'"
           @click="handleToggleHidden"
         >
-          <component
-            :is="track.hidden ? VisibilityOffOutlined : VisibilityOutlined"
-            class="size-4"
-          />
+          <component :is="track.hidden ? VisibilityOffOutlined : VisibilityOutlined" class="size-4" />
         </button>
-        
+
         <!-- 删除按钮 -->
         <button
           v-if="deletable !== false"
-          class="rounded p-0.5 text-gray-500 hover:bg-gray-700 hover:text-red-500"
+          class="rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
           title="删除轨道"
           @click="handleDelete"
         >
@@ -120,18 +123,12 @@ function handleNameChange(event: Event) {
         </button>
       </div>
     </div>
-    
+
     <!-- 轨道内容区域（片段容器） -->
-    <div
-      class="relative flex-1 overflow-hidden bg-gray-900"
-      :style="contentStyle"
-    >
+    <div class="relative flex-1 overflow-hidden bg-slate-50/50" :style="contentStyle">
       <!-- 锁定遮罩 -->
-      <div
-        v-if="track.locked"
-        class="absolute inset-0 z-10 bg-gray-900/30"
-      />
-      
+      <div v-if="track.locked" class="absolute inset-0 z-10 bg-amber-50/30" />
+
       <!-- 片段插槽 -->
       <slot name="segments" :segments="segments" :track="track" />
     </div>

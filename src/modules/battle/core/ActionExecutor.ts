@@ -115,7 +115,6 @@ export class ActionExecutor {
     return result;
   }
 
-
   /**
    * 执行攻击行动
    * Requirements: 3.3, 3.4, 3.5
@@ -204,12 +203,9 @@ export class ActionExecutor {
     // 返回待机动画
     actor.playAnimation("idle");
 
-    return this.createResult(
-      action,
-      true,
-      `${actor.config.name} 使用 ${skill.name}，造成 ${totalDamage} 点伤害`,
-      { damage: totalDamage },
-    );
+    return this.createResult(action, true, `${actor.config.name} 使用 ${skill.name}，造成 ${totalDamage} 点伤害`, {
+      damage: totalDamage,
+    });
   }
 
   /**
@@ -255,7 +251,6 @@ export class ActionExecutor {
         return this.createResult(action, true, `${actor.config.name} 使用 ${item.name}`);
     }
   }
-
 
   /**
    * 执行防御行动
@@ -363,9 +358,7 @@ export class ActionExecutor {
 
       case "all": {
         // 获取所有敌方存活单位
-        const enemies = actor.isPlayer
-          ? this.scene.getAliveEnemyUnits()
-          : this.scene.getAlivePlayerUnits();
+        const enemies = actor.isPlayer ? this.scene.getAliveEnemyUnits() : this.scene.getAlivePlayerUnits();
         targets.push(...enemies);
         break;
       }
@@ -376,9 +369,7 @@ export class ActionExecutor {
 
       case "random": {
         // 随机选择一个敌方单位
-        const enemies = actor.isPlayer
-          ? this.scene.getAliveEnemyUnits()
-          : this.scene.getAlivePlayerUnits();
+        const enemies = actor.isPlayer ? this.scene.getAliveEnemyUnits() : this.scene.getAlivePlayerUnits();
         if (enemies.length > 0) {
           const randomIndex = Math.floor(Math.random() * enemies.length);
           const randomTarget = enemies[randomIndex];

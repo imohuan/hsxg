@@ -1,23 +1,42 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
+import { useLocalStorage } from "@vueuse/core";
 import type { CharacterConfig, EffectConfig, SkillDesign, AnimationConfig } from "@/types";
+
+/** 本地存储的数据结构 */
+interface DesignerStorageData {
+  characters: CharacterConfig[];
+  effects: EffectConfig[];
+  skills: SkillDesign[];
+}
+
+/** 存储 key */
+const STORAGE_KEY = "designer-data";
 
 /**
  * 设计器状态 Store
  * 管理角色、特效、技能的编辑状态
+ * 数据自动持久化到 localStorage
  * Requirements: 4.5-4.7, 5.1-5.5
  */
 export const useDesignerStore = defineStore("designer", () => {
+  // ============ 持久化存储 ============
+  const storage = useLocalStorage<DesignerStorageData>(STORAGE_KEY, {
+    characters: [],
+    effects: [],
+    skills: [],
+  });
+
   // ============ 状态 ============
 
   /** 角色配置列表 */
-  const characters = ref<CharacterConfig[]>([]);
+  const characters = ref<CharacterConfig[]>(storage.value.characters);
 
   /** 特效配置列表 */
-  const effects = ref<EffectConfig[]>([]);
+  const effects = ref<EffectConfig[]>(storage.value.effects);
 
   /** 技能设计列表 */
-  const skills = ref<SkillDesign[]>([]);
+  const skills = ref<SkillDesign[]>(storage.value.skills);
 
   /** 当前标签页 */
   const currentTab = ref<"character" | "effect" | "skill" | "json">("character");
@@ -33,6 +52,19 @@ export const useDesignerStore = defineStore("designer", () => {
 
   /** 是否有未保存的更改 */
   const hasUnsavedChanges = ref(false);
+
+  // ============ 自动同步到 localStorage ============
+  watch(
+    [characters, effects, skills],
+    () => {
+      storage.value = {
+        characters: characters.value,
+        effects: effects.value,
+        skills: skills.value,
+      };
+    },
+    { deep: true },
+  );
 
   // ============ 计算属性 ============
 
@@ -93,9 +125,10 @@ export const useDesignerStore = defineStore("designer", () => {
   // ============ 角色方法 ============
 
   /** 添加角色 */
-  function addCharacter(config: CharacterConfig): void {
+  function addCharacter(config: CharacterConfig): string {
     characters.value.push(config);
     markDirty();
+    return config.id;
   }
 
   /** 创建新角色 */
@@ -209,9 +242,10 @@ export const useDesignerStore = defineStore("designer", () => {
   // ============ 特效方法 ============
 
   /** 添加特效 */
-  function addEffect(config: EffectConfig): void {
+  function addEffect(config: EffectConfig): string {
     effects.value.push(config);
     markDirty();
+    return config.id;
   }
 
   /** 创建新特效 */
@@ -283,11 +317,7 @@ export const useDesignerStore = defineStore("designer", () => {
   }
 
   /** 更新特效动画 */
-  function updateEffectAnimation(
-    effectId: string,
-    animationKey: string,
-    updates: Partial<AnimationConfig>,
-  ): void {
+  function updateEffectAnimation(effectId: string, animationKey: string, updates: Partial<AnimationConfig>): void {
     const effect = getEffect(effectId);
     if (effect) {
       const animIndex = effect.animations.findIndex((a) => a.key === animationKey);
@@ -492,6 +522,8 @@ export const useDesignerStore = defineStore("designer", () => {
     currentEffectId.value = null;
     currentSkillId.value = null;
     hasUnsavedChanges.value = false;
+    // 同步清除 localStorage
+    storage.value = { characters: [], effects: [], skills: [] };
   }
 
   return {

@@ -1,24 +1,19 @@
 <script setup lang="ts">
 /**
  * @file 技能编排标签页
- * @description 整合时间轴编辑器和预览功能
- * Requirements: 7.1-9.8
+ * @description 整合战斗预览、时间轴编辑器和步骤面板
  */
-import { ref, computed, watch } from "vue";
-import {
-  AddOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  SaveOutlined,
-  TimelineOutlined,
-  PlayArrowOutlined,
-  PauseOutlined,
-  SkipPreviousOutlined,
-} from "@vicons/material";
+import { ref, computed, reactive, watch } from "vue";
+import { AddOutlined, DeleteOutlined, EditOutlined, SaveOutlined } from "@vicons/material";
 import { useDesignerStore } from "@/stores/designer.store";
-import Timeline from "@/modules/timeline/components/Timeline.vue";
-import PreviewCanvas from "@/modules/timeline/components/PreviewCanvas.vue";
-import type { SkillDesign, SkillStep, TimelineSegment, TimelineTrack } from "@/types";
+import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
+import SkillBattlePreview from "../components/SkillBattlePreview.vue";
+import SkillTimeline from "../components/SkillTimeline.vue";
+import SkillTimelineControls from "../components/SkillTimelineControls.vue";
+import SkillTabPanel from "../components/SkillTabPanel.vue";
+import type { SkillDesign, SkillStep, StepType, TimelineSegment } from "@/types";
+import type { LibraryDragPayload } from "../composables/useLibraryDragToTimeline";
+import { DEFAULT_ACTOR_ID, DEFAULT_TARGET_IDS } from "../core/sandboxConfig";
 
 // ============ Store ============
 
@@ -26,70 +21,112 @@ const designerStore = useDesignerStore();
 
 // ============ 状态 ============
 
-/** 是否显示新建对话框 */
 const showCreateDialog = ref(false);
-
-/** 新技能名称 */
 const newSkillName = ref("");
-
-/** 是否处于编辑模式 */
 const isEditing = ref(false);
-
-/** 编辑中的技能名称 */
 const editingName = ref("");
-
-/** 当前帧 */
 const currentFrame = ref(0);
+const playing = ref(false);
+const fps = ref(10);
+const selectedStepIndex = ref<number | null>(null);
 
-/** 是否正在播放 */
-const isPlaying = ref(false);
+// 当前编辑的技能（响应式对象）
+const currentSkillData = reactive<{
+  id: string;
+  name: string;
+  steps: SkillStep[];
+  casterId: string;
+  selectedTargetIds: string[];
+  targetingModes: string[];
+}>({
+  id: "",
+  name: "",
+  steps: [],
+  casterId: DEFAULT_ACTOR_ID,
+  selectedTargetIds: [...DEFAULT_TARGET_IDS],
+  targetingModes: ["enemy"],
+});
 
 // ============ 计算属性 ============
 
-/** 当前选中的技能 */
 const currentSkill = computed(() => {
   if (!designerStore.currentSkillId) return null;
   return designerStore.getSkill(designerStore.currentSkillId);
 });
 
-/** 技能列表 */
 const skills = computed(() => designerStore.skills);
 
-/** 当前技能的步骤 */
-const currentSteps = computed(() => currentSkill.value?.steps ?? []);
+// 步骤默认帧数
+const STEP_FRAME_DEFAULT: Record<string, number> = {
+  move: 50,
+  damage: 30,
+  effect: 40,
+  wait: 30,
+};
 
-/** 当前技能的片段 */
-const currentSegments = computed(() => currentSkill.value?.segments ?? []);
+// 将步骤转换为时间轴片段
+const skillTimelineSegments = computed<TimelineSegment[]>(() => {
+  let cursor = 0;
+  const MAX_FRAMES_PER_STEP = 600;
 
-/** 当前技能的轨道 */
-const currentTracks = computed(() => currentSkill.value?.tracks ?? []);
+  return currentSkillData.steps.map((step, index) => {
+    const params = step.params as Record<string, unknown>;
+    const raw =
+      typeof params.duration === "number"
+        ? params.duration
+        : Number(params.duration) || STEP_FRAME_DEFAULT[step.type] || 30;
+    const frames = Math.max(1, Math.min(MAX_FRAMES_PER_STEP, Math.round(raw)));
+    const hasStartFrame = typeof params.startFrame === "number" && Number.isFinite(params.startFrame);
+    const start = hasStartFrame ? Math.max(0, Math.round(params.startFrame as number)) : cursor;
 
-/** 当前技能的总帧数 */
-const totalFrames = computed(() => currentSkill.value?.totalFrames ?? 300);
+    const segment: TimelineSegment = {
+      id: `segment-${index}`,
+      stepId: `step-${index}`,
+      trackId: typeof params.trackId === "string" ? params.trackId : "main-track",
+      startFrame: start,
+      endFrame: start + frames,
+      step,
+    };
 
-/** 当前技能的帧率 */
-const fps = computed(() => currentSkill.value?.fps ?? 30);
+    cursor = Math.max(cursor, segment.endFrame);
+    return segment;
+  });
+});
+
+const totalFrames = computed(() => {
+  const segments = skillTimelineSegments.value;
+  if (!segments.length) return 240;
+  const last = segments[segments.length - 1];
+  return Math.max(60, last?.endFrame ?? 60);
+});
+
+const selectedStep = computed<SkillStep | null>(() => {
+  if (
+    selectedStepIndex.value !== null &&
+    selectedStepIndex.value >= 0 &&
+    selectedStepIndex.value < currentSkillData.steps.length
+  ) {
+    return currentSkillData.steps[selectedStepIndex.value] as SkillStep;
+  }
+  return null;
+});
 
 // ============ 方法 ============
 
-/** 生成唯一 ID */
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** 打开新建对话框 */
 function openCreateDialog(): void {
   newSkillName.value = "";
   showCreateDialog.value = true;
 }
 
-/** 关闭新建对话框 */
 function closeCreateDialog(): void {
   showCreateDialog.value = false;
   newSkillName.value = "";
 }
 
-/** 创建新技能 */
 function createSkill(): void {
   const name = newSkillName.value.trim();
   if (!name) return;
@@ -99,16 +136,9 @@ function createSkill(): void {
     name,
     steps: [],
     segments: [],
-    tracks: [
-      {
-        id: generateId("track"),
-        name: "轨道 1",
-        locked: false,
-        hidden: false,
-      },
-    ],
+    tracks: [{ id: generateId("track"), name: "轨道 1", locked: false, hidden: false }],
     totalFrames: 300,
-    fps: 30,
+    fps: 10,
   };
 
   designerStore.addSkill(newSkill);
@@ -116,306 +146,383 @@ function createSkill(): void {
   closeCreateDialog();
 }
 
-/** 选择技能 */
 function selectSkill(skill: SkillDesign): void {
   designerStore.currentSkillId = skill.id;
   currentFrame.value = 0;
-  isPlaying.value = false;
+  playing.value = false;
+  selectedStepIndex.value = null;
 }
 
-/** 删除技能 */
 function deleteSkill(id: string): void {
   if (!confirm("确定要删除这个技能吗？")) return;
-
   designerStore.removeSkill(id);
   if (designerStore.currentSkillId === id) {
     designerStore.currentSkillId = null;
   }
 }
 
-/** 开始编辑技能名称 */
 function startEditName(): void {
   if (!currentSkill.value) return;
   editingName.value = currentSkill.value.name;
   isEditing.value = true;
 }
 
-/** 保存技能名称 */
 function saveEditName(): void {
   if (!currentSkill.value || !editingName.value.trim()) {
     isEditing.value = false;
     return;
   }
-
-  designerStore.updateSkill(currentSkill.value.id, {
-    name: editingName.value.trim(),
-  });
+  designerStore.updateSkill(currentSkill.value.id, { name: editingName.value.trim() });
   isEditing.value = false;
 }
 
-/** 取消编辑 */
 function cancelEditName(): void {
   isEditing.value = false;
   editingName.value = "";
 }
 
-/** 处理键盘事件 */
 function handleKeydown(event: KeyboardEvent): void {
-  if (event.key === "Enter") {
-    saveEditName();
-  } else if (event.key === "Escape") {
-    cancelEditName();
-  }
+  if (event.key === "Enter") saveEditName();
+  else if (event.key === "Escape") cancelEditName();
 }
 
-/** 处理步骤变化 */
-function handleStepsChange(steps: SkillStep[]): void {
+// 同步当前技能数据到响应式对象
+function syncCurrentSkillData(): void {
   if (currentSkill.value) {
-    designerStore.updateSkill(currentSkill.value.id, { steps });
+    currentSkillData.id = currentSkill.value.id;
+    currentSkillData.name = currentSkill.value.name;
+    currentSkillData.steps = [...currentSkill.value.steps];
+    fps.value = currentSkill.value.fps || 10;
+  } else {
+    currentSkillData.id = "";
+    currentSkillData.name = "";
+    currentSkillData.steps = [];
   }
 }
 
-/** 处理片段变化 */
-function handleSegmentsChange(segments: TimelineSegment[]): void {
-  if (currentSkill.value) {
-    designerStore.updateSkill(currentSkill.value.id, { segments });
+// 保存当前技能数据到 store
+function saveCurrentSkillData(): void {
+  if (!currentSkillData.id) return;
+  designerStore.updateSkill(currentSkillData.id, {
+    name: currentSkillData.name,
+    steps: currentSkillData.steps,
+    fps: fps.value,
+  });
+}
+
+// 添加步骤
+function addStep(type: StepType): void {
+  const defaultParams: Record<string, unknown> = {
+    duration: STEP_FRAME_DEFAULT[type] || 30,
+  };
+
+  if (type === "move") {
+    defaultParams.targetX = "targetX - 60";
+    defaultParams.targetY = "targetY";
+  } else if (type === "damage") {
+    defaultParams.value = 100;
+  } else if (type === "effect") {
+    defaultParams.effectId = "";
+    defaultParams.x = "targetX";
+    defaultParams.y = "targetY";
+  }
+
+  currentSkillData.steps.push({ type, params: defaultParams });
+  selectedStepIndex.value = currentSkillData.steps.length - 1;
+  saveCurrentSkillData();
+}
+
+// 删除步骤
+function deleteStep(index: number): void {
+  currentSkillData.steps.splice(index, 1);
+  if (selectedStepIndex.value === index) {
+    selectedStepIndex.value = null;
+  }
+  saveCurrentSkillData();
+}
+
+// 更新步骤参数
+function updateStepParam(payload: { key: string; value: string | number | boolean }): void {
+  if (selectedStep.value && selectedStepIndex.value !== null) {
+    selectedStep.value.params[payload.key] = payload.value;
+    saveCurrentSkillData();
   }
 }
 
-/** 处理轨道变化 */
-function handleTracksChange(tracks: TimelineTrack[]): void {
-  if (currentSkill.value) {
-    designerStore.updateSkill(currentSkill.value.id, { tracks });
+// 处理时间轴片段更新
+function handleUpdateSegment(index: number, start: number, end: number): void {
+  const step = currentSkillData.steps[index];
+  if (step) {
+    const frames = Math.max(1, end - start);
+    const params = step.params as Record<string, unknown>;
+    params.duration = frames;
+    params.startFrame = Math.max(0, Math.round(start));
+    saveCurrentSkillData();
   }
 }
 
-/** 处理帧变化 */
-function handleFrameChange(frame: number): void {
-  currentFrame.value = frame;
+// 处理拖拽放置步骤
+function handleDropStep(stepIndex: number, targetTime: number, trackId: string): void {
+  if (stepIndex < 0 || stepIndex >= currentSkillData.steps.length) return;
+
+  const targetFrame = Math.round(targetTime * fps.value);
+  const step = currentSkillData.steps[stepIndex];
+  if (step) {
+    const params = step.params as Record<string, unknown>;
+    params.startFrame = targetFrame;
+    if (trackId) params.trackId = trackId;
+    saveCurrentSkillData();
+  }
+  selectedStepIndex.value = stepIndex;
 }
 
-/** 处理播放状态变化 */
-function handlePlayingChange(playing: boolean): void {
-  isPlaying.value = playing;
+// 从库拖拽到时间轴
+function handleDropStepFromLibrary(payload: LibraryDragPayload): void {
+  if (!payload.overTimeline) return;
+
+  addStep(payload.type as StepType);
+  const newStepIndex = currentSkillData.steps.length - 1;
+  const targetTime = payload.targetTime ?? 0;
+  const trackId = payload.trackId ?? "main-track";
+  handleDropStep(newStepIndex, targetTime, trackId);
 }
 
-/** 保存当前技能 */
-function saveCurrentSkill(): void {
-  if (!currentSkill.value) return;
-  // 技能数据已经通过事件实时保存，这里只是触发一个保存确认
-  designerStore.markDirty();
+// 切换目标
+function handleToggleTarget(unitId: string): void {
+  const exists = currentSkillData.selectedTargetIds.includes(unitId);
+  if (exists) {
+    currentSkillData.selectedTargetIds = currentSkillData.selectedTargetIds.filter((id) => id !== unitId);
+  } else {
+    currentSkillData.selectedTargetIds = [...currentSkillData.selectedTargetIds, unitId];
+  }
 }
 
 // ============ 监听 ============
 
-// 监听当前技能变化
 watch(
   () => designerStore.currentSkillId,
   () => {
+    syncCurrentSkillData();
     currentFrame.value = 0;
-    isPlaying.value = false;
+    playing.value = false;
+    selectedStepIndex.value = null;
   },
+  { immediate: true },
 );
 </script>
 
 <template>
-  <div class="flex h-full w-full">
-    <!-- 左侧技能列表 -->
-    <div class="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <!-- 标题栏 -->
-      <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <h3 class="text-sm font-semibold text-slate-700">技能列表</h3>
-        <button
-          class="flex items-center gap-1 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-600"
-          @click="openCreateDialog"
-        >
-          <AddOutlined class="size-3.5" />
-          新建
-        </button>
-      </div>
-
+  <DesignerTabLayout>
+    <!-- 左侧面板 -->
+    <template #left>
       <!-- 技能列表 -->
-      <div class="flex-1 overflow-auto">
-        <div v-if="skills.length === 0" class="flex flex-col items-center justify-center p-8 text-slate-400">
-          <TimelineOutlined class="mb-2 size-12 opacity-50" />
-          <p class="text-sm">暂无技能</p>
-          <p class="text-xs">点击上方按钮创建</p>
-        </div>
-
-        <div v-else class="divide-y divide-slate-100">
-          <div
-            v-for="skill in skills"
-            :key="skill.id"
-            class="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50"
-            :class="{ 'bg-indigo-50': designerStore.currentSkillId === skill.id }"
-            @click="selectSkill(skill)"
-          >
-            <!-- 技能图标 -->
-            <div
-              class="flex size-10 items-center justify-center rounded-lg bg-slate-100"
-              :class="{ 'bg-indigo-100': designerStore.currentSkillId === skill.id }"
-            >
-              <TimelineOutlined
-                class="size-5"
-                :class="designerStore.currentSkillId === skill.id ? 'text-indigo-500' : 'text-slate-400'"
-              />
-            </div>
-
-            <!-- 技能信息 -->
-            <div class="min-w-0 flex-1">
-              <p
-                class="truncate text-sm font-medium"
-                :class="designerStore.currentSkillId === skill.id ? 'text-indigo-700' : 'text-slate-700'"
-              >
-                {{ skill.name }}
-              </p>
-              <p class="text-xs text-slate-400">
-                {{ skill.steps.length }} 步骤 · {{ skill.tracks.length }} 轨道
-              </p>
-            </div>
-
-            <!-- 操作按钮 -->
-            <button
-              class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
-              title="删除"
-              @click.stop="deleteSkill(skill.id)"
-            >
-              <DeleteOutlined class="size-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 当前技能编辑区 -->
-      <div v-if="currentSkill" class="border-t border-slate-200 bg-slate-50 p-4">
-        <div class="mb-3 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500">当前:</span>
-            <!-- 名称编辑 -->
-            <template v-if="isEditing">
-              <input
-                v-model="editingName"
-                type="text"
-                class="w-24 rounded border border-indigo-300 bg-white px-2 py-1 text-sm outline-none"
-                autofocus
-                @keydown="handleKeydown"
-                @blur="saveEditName"
-              />
-            </template>
-            <template v-else>
-              <span class="text-sm font-medium text-slate-700">{{ currentSkill.name }}</span>
-              <button
-                class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
-                title="编辑名称"
-                @click="startEditName"
-              >
-                <EditOutlined class="size-3.5" />
-              </button>
-            </template>
-          </div>
-
-          <!-- 保存按钮 -->
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h3 class="text-sm font-semibold text-slate-800">技能列表</h3>
           <button
-            class="flex items-center gap-1 rounded-lg bg-green-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-green-600"
-            @click="saveCurrentSkill"
+            class="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow"
+            @click="openCreateDialog"
           >
-            <SaveOutlined class="size-3" />
-            保存
+            <AddOutlined class="size-3.5" />
+            新建
           </button>
         </div>
 
-        <!-- 技能信息摘要 -->
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="rounded-lg bg-white p-2">
-            <span class="text-slate-500">帧数:</span>
-            <span class="ml-1 text-slate-700">{{ currentSkill.totalFrames }}</span>
+        <div class="max-h-48 overflow-auto">
+          <div v-if="skills.length === 0" class="p-4 text-center text-xs text-slate-400">
+            暂无技能，点击上方按钮创建
           </div>
-          <div class="rounded-lg bg-white p-2">
-            <span class="text-slate-500">FPS:</span>
-            <span class="ml-1 text-slate-700">{{ currentSkill.fps }}</span>
+          <div v-else class="divide-y divide-slate-100">
+            <div
+              v-for="skill in skills"
+              :key="skill.id"
+              class="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-slate-50"
+              :class="{ 'bg-indigo-50': designerStore.currentSkillId === skill.id }"
+              @click="selectSkill(skill)"
+            >
+              <div class="min-w-0 flex-1">
+                <p
+                  class="truncate text-sm font-medium"
+                  :class="designerStore.currentSkillId === skill.id ? 'text-indigo-600' : 'text-slate-700'"
+                >
+                  {{ skill.name }}
+                </p>
+                <p class="text-xs text-slate-400">{{ skill.steps.length }} 步骤</p>
+              </div>
+              <button
+                class="rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                title="删除"
+                @click.stop="deleteSkill(skill.id)"
+              >
+                <DeleteOutlined class="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 当前技能编辑 -->
+        <div v-if="currentSkill" class="border-t border-slate-100 bg-slate-50/50 p-3">
+          <div class="mb-2 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500">当前:</span>
+              <template v-if="isEditing">
+                <input
+                  v-model="editingName"
+                  type="text"
+                  class="w-24 rounded border border-indigo-300 bg-white px-2 py-1 text-sm text-slate-800 ring-2 ring-indigo-100 outline-none"
+                  autofocus
+                  @keydown="handleKeydown"
+                  @blur="saveEditName"
+                />
+              </template>
+              <template v-else>
+                <span class="text-sm font-medium text-slate-800">{{ currentSkill.name }}</span>
+                <button
+                  class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
+                  title="编辑名称"
+                  @click="startEditName"
+                >
+                  <EditOutlined class="size-3.5" />
+                </button>
+              </template>
+            </div>
+            <button
+              class="flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-all hover:bg-emerald-600 hover:shadow"
+              @click="saveCurrentSkillData"
+            >
+              <SaveOutlined class="size-3" />
+              保存
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="rounded-lg bg-white p-2 shadow-sm">
+              <span class="text-slate-500">帧数:</span>
+              <span class="ml-1 font-medium text-slate-700">{{ totalFrames }}</span>
+            </div>
+            <div class="rounded-lg bg-white p-2 shadow-sm">
+              <span class="text-slate-500">FPS:</span>
+              <span class="ml-1 font-medium text-slate-700">{{ fps }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- 步骤面板 -->
+      <SkillTabPanel
+        v-if="currentSkill"
+        :selected-step-index="selectedStepIndex"
+        :selected-step="selectedStep"
+        @select-step="(index) => (selectedStepIndex = index)"
+        @delete-step="deleteStep"
+        @add-step="addStep"
+        @update-step-param="updateStepParam"
+        @drop-step-from-library="handleDropStepFromLibrary"
+      />
+    </template>
 
     <!-- 右侧编辑区域 -->
-    <div class="flex min-w-0 flex-1 flex-col bg-slate-100">
-      <template v-if="currentSkill">
+    <template #right>
+      <div v-if="currentSkill" class="flex h-full w-full flex-col overflow-hidden">
         <!-- 预览画布 -->
-        <div class="h-80 shrink-0 border-b border-slate-200 p-4">
-          <PreviewCanvas
-            :fps="fps"
+        <div class="aspect-video w-full shrink-0 overflow-hidden">
+          <SkillBattlePreview
+            :current-frame="currentFrame"
             :total-frames="totalFrames"
-            :segments="currentSegments"
-            :steps="currentSteps"
-            :width="600"
-            :height="280"
-            @frame-change="handleFrameChange"
-            @playing-change="handlePlayingChange"
+            :playing="playing"
+            :fps="fps"
+            :segments="skillTimelineSegments"
+            :caster-id="currentSkillData.casterId"
+            :selected-target-ids="currentSkillData.selectedTargetIds"
+            :targeting-modes="currentSkillData.targetingModes"
+            @update:current-frame="currentFrame = $event"
+            @toggle-target="handleToggleTarget"
           />
         </div>
+
+        <!-- 时间轴控制栏 -->
+        <SkillTimelineControls
+          :total-frames="totalFrames"
+          :current-frame="currentFrame"
+          :fps="fps"
+          :playing="playing"
+          @update:current-frame="currentFrame = $event"
+          @update:fps="fps = $event"
+          @update:playing="playing = $event"
+        />
 
         <!-- 时间轴编辑器 -->
         <div class="min-h-0 flex-1">
-          <Timeline
-            :fps="fps"
+          <SkillTimeline
+            :segments="skillTimelineSegments"
             :total-frames="totalFrames"
-            @steps-change="handleStepsChange"
-            @segments-change="handleSegmentsChange"
-            @tracks-change="handleTracksChange"
+            :current-frame="currentFrame"
+            :fps="fps"
+            :selected-step-index="selectedStepIndex"
+            @update:current-frame="currentFrame = $event"
+            @select-step="(index) => (selectedStepIndex = index)"
+            @delete-step="deleteStep"
+            @update-segment="handleUpdateSegment"
+            @drop-step="handleDropStep"
           />
         </div>
-      </template>
+      </div>
 
       <!-- 空状态 -->
-      <div v-else class="flex h-full items-center justify-center">
-        <div class="text-center text-slate-400">
-          <TimelineOutlined class="mx-auto mb-4 size-16 opacity-50" />
-          <p class="mb-2 text-lg">请选择或创建技能</p>
-          <p class="text-sm">在左侧列表中选择一个技能，或点击"新建"按钮创建</p>
+      <div v-else class="flex h-full items-center justify-center bg-slate-50">
+        <div class="text-center">
+          <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100">
+            <svg class="size-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
+            </svg>
+          </div>
+          <p class="mb-1 text-base font-medium text-slate-700">请选择或创建技能</p>
+          <p class="text-sm text-slate-500">在左侧列表中选择一个技能，或点击"新建"按钮创建</p>
+        </div>
+      </div>
+    </template>
+  </DesignerTabLayout>
+
+  <!-- 新建对话框 -->
+  <Teleport to="body">
+    <div
+      v-if="showCreateDialog"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      @click.self="closeCreateDialog"
+    >
+      <div class="min-w-96 rounded-2xl bg-white p-6 shadow-2xl">
+        <h3 class="mb-4 text-lg font-semibold text-slate-800">新建技能</h3>
+        <div class="mb-6">
+          <label class="mb-2 block text-sm font-medium text-slate-600">技能名称</label>
+          <input
+            v-model="newSkillName"
+            type="text"
+            placeholder="输入技能名称"
+            class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+            autofocus
+            @keydown.enter="createSkill"
+          />
+        </div>
+        <div class="flex justify-end gap-3">
+          <button
+            class="rounded-lg px-5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
+            @click="closeCreateDialog"
+          >
+            取消
+          </button>
+          <button
+            class="rounded-lg bg-indigo-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow disabled:opacity-50"
+            :disabled="!newSkillName.trim()"
+            @click="createSkill"
+          >
+            创建
+          </button>
         </div>
       </div>
     </div>
-
-    <!-- 新建对话框 -->
-    <Teleport to="body">
-      <div
-        v-if="showCreateDialog"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-        @click.self="closeCreateDialog"
-      >
-        <div class="w-80 rounded-xl bg-white p-6 shadow-xl">
-          <h3 class="mb-4 text-lg font-semibold text-slate-800">新建技能</h3>
-
-          <div class="mb-4">
-            <label class="mb-1.5 block text-sm text-slate-600">技能名称</label>
-            <input
-              v-model="newSkillName"
-              type="text"
-              placeholder="输入技能名称"
-              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-colors focus:border-indigo-300 focus:bg-white"
-              autofocus
-              @keydown.enter="createSkill"
-            />
-          </div>
-
-          <div class="flex justify-end gap-2">
-            <button
-              class="rounded-lg px-4 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100"
-              @click="closeCreateDialog"
-            >
-              取消
-            </button>
-            <button
-              class="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50"
-              :disabled="!newSkillName.trim()"
-              @click="createSkill"
-            >
-              创建
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-  </div>
+  </Teleport>
 </template>

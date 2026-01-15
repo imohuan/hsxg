@@ -179,9 +179,7 @@ export function useActionQueue() {
    * 检查角色是否有待执行的行动
    */
   function hasActorAction(actorId: string): boolean {
-    return queue.value.some(
-      (action, index) => action.actorId === actorId && index >= currentIndex.value,
-    );
+    return queue.value.some((action, index) => action.actorId === actorId && index >= currentIndex.value);
   }
 
   /**

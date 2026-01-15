@@ -1,17 +1,14 @@
 <script setup lang="ts">
 /**
  * @file 设计器 Tab 通用布局组件
- * @description 提供左右两侧的标准布局结构
- * 现代 SaaS 风格：亮色主题
+ * @description 提供左右两侧的标准布局结构（现代 SaaS 风格）
  */
 </script>
 
 <template>
-  <div class="flex h-full w-full flex-1 overflow-hidden">
+  <div class="flex h-full w-full flex-1 overflow-hidden bg-slate-50">
     <!-- 左侧配置面板 -->
-    <section
-      class="flex w-96 shrink-0 flex-col gap-4 overflow-y-auto border-r border-slate-200 bg-white p-5"
-    >
+    <section class="flex w-80 shrink-0 flex-col gap-4 overflow-y-auto border-r border-slate-200 bg-white p-4 text-sm">
       <slot name="left" />
     </section>
 

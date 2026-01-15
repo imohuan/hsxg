@@ -221,24 +221,13 @@ onUnmounted(() => {
     <!-- 标题栏 -->
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium text-gray-700">动画预览</span>
-      <span class="text-xs text-gray-500">
-        {{ currentFrameIndex + 1 }} / {{ frames.length }} 帧
-      </span>
+      <span class="text-xs text-gray-500"> {{ currentFrameIndex + 1 }} / {{ frames.length }} 帧 </span>
     </div>
 
     <!-- 预览区域 -->
-    <div
-      class="flex items-center justify-center rounded bg-gray-100"
-      style="min-height: 120px"
-    >
-      <div
-        v-if="currentFrame"
-        class="bg-checkerboard"
-        :style="previewStyle"
-      />
-      <div v-else class="text-sm text-gray-400">
-        无可预览的帧
-      </div>
+    <div class="flex items-center justify-center rounded bg-gray-100" style="min-height: 120px">
+      <div v-if="currentFrame" class="bg-checkerboard" :style="previewStyle" />
+      <div v-else class="text-sm text-gray-400">无可预览的帧</div>
     </div>
 
     <!-- 进度条 -->
@@ -258,22 +247,14 @@ onUnmounted(() => {
       <!-- 播放控制 -->
       <div class="flex items-center gap-1">
         <!-- 停止按钮 -->
-        <button
-          class="rounded p-2 transition-colors hover:bg-gray-100"
-          title="停止"
-          @click="stop"
-        >
+        <button class="rounded p-2 transition-colors hover:bg-gray-100" title="停止" @click="stop">
           <svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
             <rect x="6" y="6" width="12" height="12" />
           </svg>
         </button>
 
         <!-- 上一帧 -->
-        <button
-          class="rounded p-2 transition-colors hover:bg-gray-100"
-          title="上一帧"
-          @click="prevFrame"
-        >
+        <button class="rounded p-2 transition-colors hover:bg-gray-100" title="上一帧" @click="prevFrame">
           <svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
             <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z" />
           </svg>
@@ -296,11 +277,7 @@ onUnmounted(() => {
         </button>
 
         <!-- 下一帧 -->
-        <button
-          class="rounded p-2 transition-colors hover:bg-gray-100"
-          title="下一帧"
-          @click="nextFrame"
-        >
+        <button class="rounded p-2 transition-colors hover:bg-gray-100" title="下一帧" @click="nextFrame">
           <svg class="size-4" viewBox="0 0 24 24" fill="currentColor">
             <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
           </svg>
@@ -328,10 +305,8 @@ onUnmounted(() => {
 .bg-checkerboard {
   background-color: #fff;
   background-image:
-    linear-gradient(45deg, #e0e0e0 25%, transparent 25%),
-    linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e0e0e0 75%),
-    linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
+    linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
   background-size: 16px 16px;
   background-position:
     0 0,

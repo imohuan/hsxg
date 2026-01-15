@@ -58,7 +58,6 @@ export interface UseDragDropReturn {
   calculateSnappedFrame: (frame: number, excludeSegmentId?: string) => number;
 }
 
-
 /** 默认吸附阈值（像素） */
 const DEFAULT_SNAP_THRESHOLD = 10;
 
@@ -149,10 +148,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
    * @param frame 当前帧
    * @param excludeSegmentId 排除的片段 ID（用于排除正在拖拽的片段自身）
    */
-  function findNearestSnapPoint(
-    frame: number,
-    excludeSegmentId?: string,
-  ): SnapPoint | null {
+  function findNearestSnapPoint(frame: number, excludeSegmentId?: string): SnapPoint | null {
     const framePx = frameToPx(frame);
     let nearestPoint: SnapPoint | null = null;
     let minDistance = Infinity;
@@ -163,10 +159,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
         const segment = segments.value.find((s) => s.id === excludeSegmentId);
         if (segment) {
           // 如果是当前片段的原始位置，跳过
-          if (
-            point.frame === dragState.value.originalStartFrame ||
-            point.frame === dragState.value.originalEndFrame
-          ) {
+          if (point.frame === dragState.value.originalStartFrame || point.frame === dragState.value.originalEndFrame) {
             continue;
           }
         }
@@ -187,10 +180,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
   /**
    * 计算吸附后的帧数
    */
-  function calculateSnappedFrame(
-    frame: number,
-    excludeSegmentId?: string,
-  ): number {
+  function calculateSnappedFrame(frame: number, excludeSegmentId?: string): number {
     const snapPoint = findNearestSnapPoint(frame, excludeSegmentId);
     if (snapPoint) {
       activeSnapPoint.value = snapPoint;
@@ -200,17 +190,12 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
     return frame;
   }
 
-
   // ============ 拖拽方法 ============
 
   /**
    * 开始拖拽
    */
-  function startDrag(
-    segmentId: string,
-    mode: DragMode,
-    event: MouseEvent,
-  ): void {
+  function startDrag(segmentId: string, mode: DragMode, event: MouseEvent): void {
     const segment = segments.value.find((s) => s.id === segmentId);
     if (!segment || !mode) return;
 
@@ -238,9 +223,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
     const deltaX = event.clientX - dragState.value.startX;
     const deltaFrames = pxToFrame(deltaX);
 
-    const segment = segments.value.find(
-      (s) => s.id === dragState.value.segmentId,
-    );
+    const segment = segments.value.find((s) => s.id === dragState.value.segmentId);
     if (!segment) return;
 
     let newStartFrame = dragState.value.originalStartFrame;
@@ -273,10 +256,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
 
       case "resize-end": {
         // 调整结束位置
-        newEndFrame = calculateSnappedFrame(
-          dragState.value.originalEndFrame + deltaFrames,
-          dragState.value.segmentId,
-        );
+        newEndFrame = calculateSnappedFrame(dragState.value.originalEndFrame + deltaFrames, dragState.value.segmentId);
         // 确保 endFrame > startFrame
         newEndFrame = Math.max(newStartFrame + 1, newEndFrame);
         break;

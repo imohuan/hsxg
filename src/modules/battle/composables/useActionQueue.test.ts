@@ -16,16 +16,18 @@ import type { UnitStats, ActionType } from "@/types";
  * 生成有效的 UnitStats
  */
 const arbitraryUnitStats = (): fc.Arbitrary<UnitStats> =>
-  fc.record({
-    hp: fc.integer({ min: 1, max: 1000 }),
-    maxHp: fc.integer({ min: 1, max: 1000 }),
-    mp: fc.integer({ min: 0, max: 500 }),
-    maxMp: fc.integer({ min: 1, max: 500 }),
-    speed: fc.integer({ min: 1, max: 100 }),
-    luck: fc.integer({ min: 1, max: 100 }),
-    attack: fc.integer({ min: 1, max: 200 }),
-    defense: fc.integer({ min: 1, max: 200 }),
-  }).filter((stats) => stats.hp <= stats.maxHp && stats.mp <= stats.maxMp);
+  fc
+    .record({
+      hp: fc.integer({ min: 1, max: 1000 }),
+      maxHp: fc.integer({ min: 1, max: 1000 }),
+      mp: fc.integer({ min: 0, max: 500 }),
+      maxMp: fc.integer({ min: 1, max: 500 }),
+      speed: fc.integer({ min: 1, max: 100 }),
+      luck: fc.integer({ min: 1, max: 100 }),
+      attack: fc.integer({ min: 1, max: 200 }),
+      defense: fc.integer({ min: 1, max: 200 }),
+    })
+    .filter((stats) => stats.hp <= stats.maxHp && stats.mp <= stats.maxMp);
 
 /**
  * 生成有效的 ActionType

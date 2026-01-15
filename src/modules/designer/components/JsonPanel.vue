@@ -85,9 +85,7 @@ function validateJson(): void {
   try {
     parsed = JSON.parse(jsonText.value);
   } catch (e) {
-    validationErrors.value = [
-      { path: "", message: `JSON 解析失败: ${e instanceof Error ? e.message : "未知错误"}` },
-    ];
+    validationErrors.value = [{ path: "", message: `JSON 解析失败: ${e instanceof Error ? e.message : "未知错误"}` }];
     showValidationPanel.value = true;
     return;
   }
@@ -188,9 +186,7 @@ function formatJson(): void {
     jsonText.value = JSON.stringify(parsed, null, 2);
     validationErrors.value = [];
   } catch (e) {
-    validationErrors.value = [
-      { path: "", message: `格式化失败: ${e instanceof Error ? e.message : "未知错误"}` },
-    ];
+    validationErrors.value = [{ path: "", message: `格式化失败: ${e instanceof Error ? e.message : "未知错误"}` }];
     showValidationPanel.value = true;
   }
 }
@@ -273,7 +269,7 @@ watch(
             <input
               v-model="configStore.projectName"
               type="text"
-              class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-colors focus:border-indigo-300 focus:bg-white"
+              class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm transition-colors outline-none focus:border-indigo-300 focus:bg-white"
             />
           </label>
           <label class="block">
@@ -281,12 +277,10 @@ watch(
             <input
               v-model="configStore.version"
               type="text"
-              class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-colors focus:border-indigo-300 focus:bg-white"
+              class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm transition-colors outline-none focus:border-indigo-300 focus:bg-white"
             />
           </label>
-          <div class="text-xs text-slate-400">
-            最后保存: {{ lastSavedAtFormatted }}
-          </div>
+          <div class="text-xs text-slate-400">最后保存: {{ lastSavedAtFormatted }}</div>
         </div>
       </div>
 
@@ -348,15 +342,12 @@ watch(
             下载 JSON
           </button>
 
-          <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
+          <label
+            class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
             <FileUploadOutlined class="size-4" />
             上传文件
-            <input
-              type="file"
-              accept=".json"
-              class="hidden"
-              @change="handleFileUpload"
-            />
+            <input type="file" accept=".json" class="hidden" @change="handleFileUpload" />
           </label>
         </div>
       </div>
@@ -454,27 +445,17 @@ watch(
           <div class="flex items-center gap-2">
             <ErrorOutlined v-if="hasValidationErrors" class="size-5 text-red-500" />
             <CheckOutlined v-else class="size-5 text-emerald-500" />
-            <h3
-              class="text-sm font-semibold"
-              :class="hasValidationErrors ? 'text-red-700' : 'text-emerald-700'"
-            >
+            <h3 class="text-sm font-semibold" :class="hasValidationErrors ? 'text-red-700' : 'text-emerald-700'">
               {{ hasValidationErrors ? `验证失败 (${validationErrors.length} 个错误)` : "验证通过" }}
             </h3>
           </div>
-          <button
-            class="rounded p-1 transition-colors hover:bg-white/50"
-            @click="showValidationPanel = false"
-          >
+          <button class="rounded p-1 transition-colors hover:bg-white/50" @click="showValidationPanel = false">
             ✕
           </button>
         </div>
         <div v-if="hasValidationErrors" class="max-h-48 overflow-y-auto p-4">
           <ul class="space-y-2 text-sm">
-            <li
-              v-for="(error, index) in validationErrors"
-              :key="index"
-              class="flex items-start gap-2 text-red-600"
-            >
+            <li v-for="(error, index) in validationErrors" :key="index" class="flex items-start gap-2 text-red-600">
               <WarningAmberOutlined class="mt-0.5 size-4 shrink-0" />
               <div>
                 <span v-if="error.path" class="font-mono text-red-700">{{ error.path }}:</span>
@@ -496,16 +477,8 @@ watch(
             >
               未保存
             </span>
-            <span
-              v-if="!isValidJson"
-              class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600"
-            >
-              格式错误
-            </span>
-            <span
-              v-else-if="jsonText.trim()"
-              class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-600"
-            >
+            <span v-if="!isValidJson" class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600"> 格式错误 </span>
+            <span v-else-if="jsonText.trim()" class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-600">
               格式正确
             </span>
             <button
@@ -519,7 +492,7 @@ watch(
         <div class="flex-1 p-4">
           <textarea
             v-model="jsonText"
-            class="h-full w-full resize-none rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-sm outline-none transition-colors focus:border-indigo-300 focus:bg-white"
+            class="h-full w-full resize-none rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-sm transition-colors outline-none focus:border-indigo-300 focus:bg-white"
             :class="{ 'border-red-300 bg-red-50': !isValidJson }"
             placeholder="点击「生成配置」按钮生成 JSON，或在此输入/粘贴 JSON 配置..."
             spellcheck="false"

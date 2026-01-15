@@ -155,9 +155,7 @@ export function usePreview(options: UsePreviewOptions): UsePreviewReturn {
    * 片段在 [startFrame, endFrame) 范围内激活
    */
   function getActiveSegmentsAtFrame(frame: number): TimelineSegment[] {
-    return segments.value.filter(
-      (segment) => frame >= segment.startFrame && frame < segment.endFrame,
-    );
+    return segments.value.filter((segment) => frame >= segment.startFrame && frame < segment.endFrame);
   }
 
   /**
@@ -229,10 +227,7 @@ export function usePreview(options: UsePreviewOptions): UsePreviewReturn {
       if (step && onExecuteStep) {
         // 计算步骤内的进度（0-1）
         const segmentDuration = segment.endFrame - segment.startFrame;
-        const segmentProgress =
-          segmentDuration > 0
-            ? (currentFrame.value - segment.startFrame) / segmentDuration
-            : 1;
+        const segmentProgress = segmentDuration > 0 ? (currentFrame.value - segment.startFrame) / segmentDuration : 1;
         onExecuteStep(step, segmentProgress);
       }
     }

@@ -123,16 +123,18 @@ const arbitraryDeadUnits = (isPlayer: boolean): fc.Arbitrary<UnitState[]> =>
  * 生成至少有一个存活单位的列表
  */
 const arbitraryAliveUnits = (isPlayer: boolean): fc.Arbitrary<UnitState[]> =>
-  fc.tuple(
-    // 至少一个存活单位
-    fc.record({
-      id: fc.uuid(),
-      hp: fc.integer({ min: 1, max: 1000 }), // HP > 0
-      isPlayer: fc.constant(isPlayer),
-    }),
-    // 可能有其他单位（存活或死亡）
-    fc.array(arbitraryUnitState(isPlayer), { minLength: 0, maxLength: 5 }),
-  ).map(([alive, others]) => [alive, ...others]);
+  fc
+    .tuple(
+      // 至少一个存活单位
+      fc.record({
+        id: fc.uuid(),
+        hp: fc.integer({ min: 1, max: 1000 }), // HP > 0
+        isPlayer: fc.constant(isPlayer),
+      }),
+      // 可能有其他单位（存活或死亡）
+      fc.array(arbitraryUnitState(isPlayer), { minLength: 0, maxLength: 5 }),
+    )
+    .map(([alive, others]) => [alive, ...others]);
 
 describe("胜负判定属性测试", () => {
   /**

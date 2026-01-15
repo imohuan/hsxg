@@ -252,12 +252,7 @@ export function useBattle(options: UseBattleOptions = {}): UseBattleReturn {
    * 提交玩家行动
    * Requirements: 2.2-2.9
    */
-  function submitAction(
-    type: ActionType,
-    targetId?: string,
-    skillId?: string,
-    itemId?: string,
-  ): void {
+  function submitAction(type: ActionType, targetId?: string, skillId?: string, itemId?: string): void {
     const actor = currentActor.value;
     if (!actor || phase.value !== "command") return;
 

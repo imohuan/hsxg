@@ -46,19 +46,27 @@ const timerColor = computed(() => {
 
 const resultText = computed(() => {
   switch (battle.result.value) {
-    case "win": return "战斗胜利！";
-    case "lose": return "战斗失败...";
-    case "escape": return "成功逃跑！";
-    default: return "";
+    case "win":
+      return "战斗胜利！";
+    case "lose":
+      return "战斗失败...";
+    case "escape":
+      return "成功逃跑！";
+    default:
+      return "";
   }
 });
 
 const resultColor = computed(() => {
   switch (battle.result.value) {
-    case "win": return "text-emerald-500";
-    case "lose": return "text-red-500";
-    case "escape": return "text-amber-500";
-    default: return "text-slate-700";
+    case "win":
+      return "text-emerald-500";
+    case "lose":
+      return "text-red-500";
+    case "escape":
+      return "text-amber-500";
+    default:
+      return "text-slate-700";
   }
 });
 
@@ -75,9 +83,7 @@ const sampleItems = [
   { id: "ether", name: "魔法药水", count: 2, description: "恢复 30 MP" },
 ];
 
-const sampleSummons = [
-  { id: "wolf", name: "召唤狼", description: "召唤一只战狼" },
-];
+const sampleSummons = [{ id: "wolf", name: "召唤狼", description: "召唤一只战狼" }];
 
 // ============ 方法 ============
 
@@ -89,12 +95,7 @@ function handleUnitClick(unit: Unit): void {
   console.log("[BattlePage] 单位被点击:", unit.config.name);
 }
 
-function handleAction(
-  type: ActionType,
-  targetId?: string,
-  skillId?: string,
-  itemId?: string,
-): void {
+function handleAction(type: ActionType, targetId?: string, skillId?: string, itemId?: string): void {
   battle.submitAction(type, targetId, skillId, itemId);
 }
 
@@ -109,21 +110,12 @@ async function startDemoBattle(): Promise<void> {
       createDemoUnit("player2", "法师", true, 1, 0),
       createDemoUnit("player3", "牧师", true, 2, 0),
     ],
-    enemyUnits: [
-      createDemoUnit("enemy1", "哥布林", false, 0, 0),
-      createDemoUnit("enemy2", "史莱姆", false, 1, 0),
-    ],
+    enemyUnits: [createDemoUnit("enemy1", "哥布林", false, 0, 0), createDemoUnit("enemy2", "史莱姆", false, 1, 0)],
   };
   await battle.startBattle(demoConfig);
 }
 
-function createDemoUnit(
-  id: string,
-  name: string,
-  isPlayer: boolean,
-  row: number,
-  col: number,
-): UnitConfig {
+function createDemoUnit(id: string, name: string, isPlayer: boolean, row: number, col: number): UnitConfig {
   return {
     id,
     name,
@@ -207,12 +199,7 @@ watch(
       <!-- 战斗画布 -->
       <div class="flex flex-1 items-center justify-center p-6">
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-          <BattleCanvas
-            :width="800"
-            :height="450"
-            @ready="handleSceneReady"
-            @unit-click="handleUnitClick"
-          />
+          <BattleCanvas :width="800" :height="450" @ready="handleSceneReady" @unit-click="handleUnitClick" />
         </div>
       </div>
 
@@ -288,14 +275,9 @@ watch(
         </div>
 
         <!-- 行动队列预览 -->
-        <div
-          v-if="battle.actionQueueLength.value > 0"
-          class="rounded-xl border border-slate-200 bg-slate-50 p-4"
-        >
+        <div v-if="battle.actionQueueLength.value > 0" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <h4 class="mb-2 text-sm font-semibold text-slate-500">行动队列</h4>
-          <div class="text-sm text-slate-700">
-            剩余行动: {{ battle.actionQueueLength.value }}
-          </div>
+          <div class="text-sm text-slate-700">剩余行动: {{ battle.actionQueueLength.value }}</div>
         </div>
       </div>
     </div>
@@ -309,9 +291,7 @@ watch(
         <h2 class="mb-4 text-3xl font-bold" :class="resultColor">
           {{ resultText }}
         </h2>
-        <p class="mb-6 text-slate-500">
-          战斗持续 {{ battle.turn.value }} 回合
-        </p>
+        <p class="mb-6 text-slate-500">战斗持续 {{ battle.turn.value }} 回合</p>
         <div class="flex justify-center gap-4">
           <button
             class="rounded-lg bg-indigo-500 px-6 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-indigo-600"

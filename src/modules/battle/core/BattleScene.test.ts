@@ -66,17 +66,13 @@ describe("BattleScene 单位位置属性测试", () => {
    */
   it("Property 1: 玩家单位 x 坐标应小于画布中心点", () => {
     fc.assert(
-      fc.property(
-        arbitraryUnitPosition(),
-        arbitraryCanvasSize(),
-        (position, canvas) => {
-          const { x } = calculateUnitPosition(position, true, canvas.width, canvas.height);
-          const centerX = canvas.width / 2;
+      fc.property(arbitraryUnitPosition(), arbitraryCanvasSize(), (position, canvas) => {
+        const { x } = calculateUnitPosition(position, true, canvas.width, canvas.height);
+        const centerX = canvas.width / 2;
 
-          // 玩家单位应在画布左侧（x < centerX）
-          expect(x).toBeLessThan(centerX);
-        },
-      ),
+        // 玩家单位应在画布左侧（x < centerX）
+        expect(x).toBeLessThan(centerX);
+      }),
       { numRuns: 100 },
     );
   });
@@ -87,17 +83,13 @@ describe("BattleScene 单位位置属性测试", () => {
    */
   it("Property 1: 敌方单位 x 坐标应大于画布中心点", () => {
     fc.assert(
-      fc.property(
-        arbitraryUnitPosition(),
-        arbitraryCanvasSize(),
-        (position, canvas) => {
-          const { x } = calculateUnitPosition(position, false, canvas.width, canvas.height);
-          const centerX = canvas.width / 2;
+      fc.property(arbitraryUnitPosition(), arbitraryCanvasSize(), (position, canvas) => {
+        const { x } = calculateUnitPosition(position, false, canvas.width, canvas.height);
+        const centerX = canvas.width / 2;
 
-          // 敌方单位应在画布右侧（x > centerX）
-          expect(x).toBeGreaterThan(centerX);
-        },
-      ),
+        // 敌方单位应在画布右侧（x > centerX）
+        expect(x).toBeGreaterThan(centerX);
+      }),
       { numRuns: 100 },
     );
   });
@@ -108,20 +100,16 @@ describe("BattleScene 单位位置属性测试", () => {
    */
   it("Property 1 补充: 同一位置的玩家和敌方单位 x 坐标应不同", () => {
     fc.assert(
-      fc.property(
-        arbitraryUnitPosition(),
-        arbitraryCanvasSize(),
-        (position, canvas) => {
-          const playerPos = calculateUnitPosition(position, true, canvas.width, canvas.height);
-          const enemyPos = calculateUnitPosition(position, false, canvas.width, canvas.height);
+      fc.property(arbitraryUnitPosition(), arbitraryCanvasSize(), (position, canvas) => {
+        const playerPos = calculateUnitPosition(position, true, canvas.width, canvas.height);
+        const enemyPos = calculateUnitPosition(position, false, canvas.width, canvas.height);
 
-          // 玩家和敌方单位的 x 坐标应不同
-          expect(playerPos.x).not.toBe(enemyPos.x);
+        // 玩家和敌方单位的 x 坐标应不同
+        expect(playerPos.x).not.toBe(enemyPos.x);
 
-          // 玩家应在左侧，敌方应在右侧
-          expect(playerPos.x).toBeLessThan(enemyPos.x);
-        },
-      ),
+        // 玩家应在左侧，敌方应在右侧
+        expect(playerPos.x).toBeLessThan(enemyPos.x);
+      }),
       { numRuns: 100 },
     );
   });

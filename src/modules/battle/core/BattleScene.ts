@@ -107,7 +107,6 @@ export class BattleScene extends Phaser.Scene {
     this.messageText.setDepth(100);
   }
 
-
   // ============ 单位管理 ============
 
   /**
@@ -244,7 +243,6 @@ export class BattleScene extends Phaser.Scene {
     return this.playerUnits.filter((u) => u.isActionable).sort((a, b) => a.y - b.y);
   }
 
-
   // ============ 交互处理 ============
 
   /**
@@ -300,10 +298,7 @@ export class BattleScene extends Phaser.Scene {
   /**
    * 播放单位动画并等待完成
    */
-  async playUnitAnimationAsync(
-    unitId: string,
-    animKey: "idle" | "attack" | "hit" | "death" | "skill",
-  ): Promise<void> {
+  async playUnitAnimationAsync(unitId: string, animKey: "idle" | "attack" | "hit" | "death" | "skill"): Promise<void> {
     const unit = this.units.get(unitId);
     if (unit) {
       await unit.playAnimationOnce(animKey);
@@ -343,7 +338,6 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-
   // ============ 特效播放 ============
 
   /**
@@ -378,8 +372,7 @@ export class BattleScene extends Phaser.Scene {
     // 设置混合模式
     if (config.blendMode) {
       sprite.setBlendMode(
-        Phaser.BlendModes[config.blendMode as keyof typeof Phaser.BlendModes] ||
-        Phaser.BlendModes.NORMAL,
+        Phaser.BlendModes[config.blendMode as keyof typeof Phaser.BlendModes] || Phaser.BlendModes.NORMAL,
       );
     }
 
@@ -444,7 +437,6 @@ export class BattleScene extends Phaser.Scene {
       this.load.start();
     });
   }
-
 
   // ============ 场景效果 ============
 

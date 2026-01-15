@@ -230,11 +230,7 @@ export const useConfigStore = defineStore("config", () => {
     if (typeof seg.endFrame !== "number" || seg.endFrame < 0) {
       errors.push({ path: `${path}.endFrame`, message: "endFrame 必须是非负整数" });
     }
-    if (
-      typeof seg.startFrame === "number" &&
-      typeof seg.endFrame === "number" &&
-      seg.endFrame <= seg.startFrame
-    ) {
+    if (typeof seg.startFrame === "number" && typeof seg.endFrame === "number" && seg.endFrame <= seg.startFrame) {
       errors.push({ path: `${path}`, message: "endFrame 必须大于 startFrame" });
     }
 

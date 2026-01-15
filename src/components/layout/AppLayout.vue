@@ -85,9 +85,7 @@ function switchDesignerTab(path: string) {
 <template>
   <div class="flex h-full min-h-screen flex-col bg-slate-50 text-slate-800">
     <!-- 顶部导航栏 -->
-    <header
-      class="flex items-center border-b border-slate-200 bg-white px-6 py-3 shadow-sm"
-    >
+    <header class="flex items-center border-b border-slate-200 bg-white px-6 py-3 shadow-sm">
       <!-- Logo 和标题 -->
       <div class="flex items-center gap-3 text-lg font-bold text-slate-800">
         <div class="flex size-8 items-center justify-center rounded-lg bg-indigo-500 text-white">
@@ -135,11 +133,7 @@ function switchDesignerTab(path: string) {
           <span
             v-if="getTabCount(tab.key) > 0"
             class="rounded-full px-1.5 py-0.5 text-xs"
-            :class="
-              activeDesignerTab === tab.key
-                ? 'bg-indigo-100 text-indigo-600'
-                : 'bg-slate-100 text-slate-500'
-            "
+            :class="activeDesignerTab === tab.key ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'"
           >
             {{ getTabCount(tab.key) }}
           </span>
@@ -149,7 +143,10 @@ function switchDesignerTab(path: string) {
       <!-- 右侧工具区域 -->
       <div class="ml-auto flex items-center gap-2">
         <!-- 未保存提示 -->
-        <div v-if="showDesignerTabs && designerStore.hasUnsavedChanges" class="flex items-center gap-1.5 text-xs text-amber-600">
+        <div
+          v-if="showDesignerTabs && designerStore.hasUnsavedChanges"
+          class="flex items-center gap-1.5 text-xs text-amber-600"
+        >
           <CircleOutlined class="size-2 animate-pulse fill-current" />
           <span>有未保存的更改</span>
         </div>

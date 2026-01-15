@@ -8,7 +8,6 @@
  */
 import { describe, it, expect } from "vitest";
 import * as fc from "fast-check";
-import { ref } from "vue";
 
 /**
  * 纯函数：计算帧序列
@@ -70,18 +69,6 @@ export function calculateFrames(config: SpriteSheetConfig): SpriteFrame[] {
 }
 
 /**
- * 生成有效的雪碧图配置
- */
-const arbitrarySpriteSheetConfig = (): fc.Arbitrary<SpriteSheetConfig> =>
-  fc.record({
-    imageWidth: fc.integer({ min: 1, max: 4096 }),
-    imageHeight: fc.integer({ min: 1, max: 4096 }),
-    rows: fc.integer({ min: 1, max: 32 }),
-    cols: fc.integer({ min: 1, max: 32 }),
-    frameCount: fc.option(fc.integer({ min: 1, max: 1024 }), { nil: undefined }),
-  });
-
-/**
  * 生成保证有效帧尺寸的雪碧图配置
  */
 const arbitraryValidSpriteSheetConfig = (): fc.Arbitrary<SpriteSheetConfig> =>
@@ -115,8 +102,7 @@ describe("雪碧图帧切割属性测试", () => {
       fc.property(arbitraryValidSpriteSheetConfig(), (config) => {
         const frames = calculateFrames(config);
         const maxFrames = config.rows * config.cols;
-        const expectedFrames =
-          config.frameCount !== undefined ? Math.min(config.frameCount, maxFrames) : maxFrames;
+        const expectedFrames = config.frameCount !== undefined ? Math.min(config.frameCount, maxFrames) : maxFrames;
 
         // 验证：帧序列长度应等于预期值
         expect(frames.length).toBe(expectedFrames);
@@ -286,10 +272,7 @@ describe("雪碧图帧切割属性测试", () => {
 
               // 检查是否重叠（矩形碰撞检测）
               const noOverlap =
-                a.x + a.width <= b.x ||
-                b.x + b.width <= a.x ||
-                a.y + a.height <= b.y ||
-                b.y + b.height <= a.y;
+                a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
 
               expect(noOverlap).toBe(true);
             }

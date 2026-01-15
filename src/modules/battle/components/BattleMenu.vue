@@ -72,11 +72,42 @@ const canSummon = computed(() => {
 
 const mainMenuItems = computed(() => [
   { key: "attack", label: "攻击", icon: GavelOutlined, color: "text-red-500", bgColor: "bg-red-50 hover:bg-red-100" },
-  { key: "skill", label: "技能", icon: AutoFixHighOutlined, color: "text-purple-500", bgColor: "bg-purple-50 hover:bg-purple-100" },
-  { key: "item", label: "物品", icon: LocalHospitalOutlined, color: "text-emerald-500", bgColor: "bg-emerald-50 hover:bg-emerald-100" },
-  { key: "defend", label: "防御", icon: ShieldOutlined, color: "text-blue-500", bgColor: "bg-blue-50 hover:bg-blue-100" },
-  { key: "escape", label: "逃跑", icon: DirectionsRunOutlined, color: "text-amber-500", bgColor: "bg-amber-50 hover:bg-amber-100" },
-  { key: "summon", label: "召唤", icon: GroupAddOutlined, color: "text-indigo-500", bgColor: "bg-indigo-50 hover:bg-indigo-100", disabled: !canSummon.value },
+  {
+    key: "skill",
+    label: "技能",
+    icon: AutoFixHighOutlined,
+    color: "text-purple-500",
+    bgColor: "bg-purple-50 hover:bg-purple-100",
+  },
+  {
+    key: "item",
+    label: "物品",
+    icon: LocalHospitalOutlined,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-50 hover:bg-emerald-100",
+  },
+  {
+    key: "defend",
+    label: "防御",
+    icon: ShieldOutlined,
+    color: "text-blue-500",
+    bgColor: "bg-blue-50 hover:bg-blue-100",
+  },
+  {
+    key: "escape",
+    label: "逃跑",
+    icon: DirectionsRunOutlined,
+    color: "text-amber-500",
+    bgColor: "bg-amber-50 hover:bg-amber-100",
+  },
+  {
+    key: "summon",
+    label: "召唤",
+    icon: GroupAddOutlined,
+    color: "text-indigo-500",
+    bgColor: "bg-indigo-50 hover:bg-indigo-100",
+    disabled: !canSummon.value,
+  },
 ]);
 
 // ============ 方法 ============
@@ -123,7 +154,13 @@ function handleItemSelect(itemId: string): void {
 
 function handleTargetSelect(targetId: string): void {
   if (pendingAction.value) {
-    emit("action", pendingAction.value, targetId, selectedSkillId.value ?? undefined, selectedItemId.value ?? undefined);
+    emit(
+      "action",
+      pendingAction.value,
+      targetId,
+      selectedSkillId.value ?? undefined,
+      selectedItemId.value ?? undefined,
+    );
   }
   resetMenu();
 }
@@ -169,7 +206,7 @@ function resetMenu(): void {
         :class="[
           item.bgColor,
           item.disabled ? 'cursor-not-allowed opacity-50' : '',
-          disabled ? 'pointer-events-none opacity-50' : ''
+          disabled ? 'pointer-events-none opacity-50' : '',
         ]"
         :disabled="item.disabled || disabled"
         @click="handleMainMenuClick(item.key)"
@@ -292,10 +329,7 @@ function resetMenu(): void {
           <div class="font-medium text-slate-700">{{ target.name }}</div>
           <div class="flex items-center gap-2">
             <div class="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
-              <div
-                class="h-full bg-red-500"
-                :style="{ width: `${(target.stats.hp / target.stats.maxHp) * 100}%` }"
-              />
+              <div class="h-full bg-red-500" :style="{ width: `${(target.stats.hp / target.stats.maxHp) * 100}%` }" />
             </div>
             <span class="text-xs text-slate-500">{{ target.stats.hp }}/{{ target.stats.maxHp }}</span>
           </div>

@@ -116,7 +116,6 @@ export class Unit extends Phaser.GameObjects.Container {
     return this._stats.speed + this._stats.luck;
   }
 
-
   // ============ 位置计算 ============
 
   /**
@@ -216,13 +215,7 @@ export class Unit extends Phaser.GameObjects.Container {
     // 背景
     this.hpBarBg = this.scene.add.graphics();
     this.hpBarBg.fillStyle(0x333333, 0.8);
-    this.hpBarBg.fillRoundedRect(
-      -Unit.BAR_WIDTH / 2,
-      barY,
-      Unit.BAR_WIDTH,
-      Unit.BAR_HEIGHT * 2 + 2,
-      2,
-    );
+    this.hpBarBg.fillRoundedRect(-Unit.BAR_WIDTH / 2, barY, Unit.BAR_WIDTH, Unit.BAR_HEIGHT * 2 + 2, 2);
     this.add(this.hpBarBg);
 
     // HP 条
@@ -235,7 +228,6 @@ export class Unit extends Phaser.GameObjects.Container {
 
     this.updateBars();
   }
-
 
   /** 更新血条和蓝条显示 */
   private updateBars(): void {
@@ -283,10 +275,7 @@ export class Unit extends Phaser.GameObjects.Container {
   /** 设置交互区域 */
   private setupInteractive(): void {
     this.setSize(60, 100);
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(-30, -50, 60, 100),
-      Phaser.Geom.Rectangle.Contains,
-    );
+    this.setInteractive(new Phaser.Geom.Rectangle(-30, -50, 60, 100), Phaser.Geom.Rectangle.Contains);
   }
 
   // ============ 属性修改 ============
@@ -349,7 +338,6 @@ export class Unit extends Phaser.GameObjects.Container {
       onComplete: () => text.destroy(),
     });
   }
-
 
   // ============ 状态管理 ============
 

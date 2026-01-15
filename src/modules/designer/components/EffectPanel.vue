@@ -5,13 +5,7 @@
  * Requirements: 5.1-5.5
  */
 import { ref, computed, watch } from "vue";
-import {
-  AddOutlined,
-  DeleteOutlined,
-  SaveOutlined,
-  EditOutlined,
-  AutoAwesomeOutlined,
-} from "@vicons/material";
+import { AddOutlined, DeleteOutlined, SaveOutlined, EditOutlined, AutoAwesomeOutlined } from "@vicons/material";
 import { useDesignerStore } from "@/stores/designer.store";
 import type { EffectConfig, SpriteConfig, AnimationConfig } from "@/types";
 
@@ -246,7 +240,7 @@ watch(
           </div>
 
           <!-- 特效信息 -->
-          <div class="flex-1 min-w-0">
+          <div class="min-w-0 flex-1">
             <p
               class="truncate text-sm font-medium"
               :class="designerStore.currentEffectId === effect.id ? 'text-indigo-700' : 'text-slate-700'"
@@ -254,7 +248,7 @@ watch(
               {{ effect.name }}
             </p>
             <p class="text-xs text-slate-400">
-              {{ effect.animations.length }} 个动画 · {{ getBlendModeLabel(effect.blendMode ?? 'normal') }}
+              {{ effect.animations.length }} 个动画 · {{ getBlendModeLabel(effect.blendMode ?? "normal") }}
             </p>
           </div>
 
@@ -313,7 +307,7 @@ watch(
         <div class="rounded-lg bg-white p-2">
           <span class="text-slate-500">雪碧图:</span>
           <span class="ml-1 text-slate-700">
-            {{ currentEffect.sprite.url ? '已配置' : '未配置' }}
+            {{ currentEffect.sprite.url ? "已配置" : "未配置" }}
           </span>
         </div>
         <div class="rounded-lg bg-white p-2">
@@ -322,7 +316,7 @@ watch(
         </div>
         <div class="rounded-lg bg-white p-2">
           <span class="text-slate-500">混合:</span>
-          <span class="ml-1 text-slate-700">{{ getBlendModeLabel(currentEffect.blendMode ?? 'normal') }}</span>
+          <span class="ml-1 text-slate-700">{{ getBlendModeLabel(currentEffect.blendMode ?? "normal") }}</span>
         </div>
       </div>
     </div>
@@ -343,7 +337,7 @@ watch(
               v-model="newEffectName"
               type="text"
               placeholder="输入特效名称"
-              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-colors focus:border-indigo-300 focus:bg-white"
+              class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm transition-colors outline-none focus:border-indigo-300 focus:bg-white"
               autofocus
               @keydown.enter="createEffect"
             />

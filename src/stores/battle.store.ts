@@ -45,9 +45,7 @@ export const useBattleStore = defineStore("battle", () => {
   const currentActor = computed(() => alivePlayerUnits.value[currentActorIndex.value]);
 
   /** 是否战斗结束 */
-  const isBattleOver = computed(
-    () => alivePlayerUnits.value.length === 0 || aliveEnemyUnits.value.length === 0,
-  );
+  const isBattleOver = computed(() => alivePlayerUnits.value.length === 0 || aliveEnemyUnits.value.length === 0);
 
   // ============ 方法 ============
 

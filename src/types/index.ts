@@ -151,11 +151,18 @@ export interface StepParams {
   // 背景步骤
   color?: string;
   image?: string;
+
+  // 时间轴相关
+  startFrame?: number;
+  trackId?: string;
+
+  // 允许动态属性
+  [key: string]: unknown;
 }
 
 /** 技能步骤 */
 export interface SkillStep {
-  id: string;
+  id?: string;
   type: StepType;
   params: StepParams;
 }
@@ -167,6 +174,7 @@ export interface TimelineSegment {
   trackId: string;
   startFrame: number;
   endFrame: number;
+  step?: SkillStep;
 }
 
 /** 时间轴轨道 */

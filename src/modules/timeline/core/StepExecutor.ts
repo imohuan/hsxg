@@ -454,12 +454,12 @@ export class StepExecutor {
    */
   static getStepTypeColor(type: StepType): string {
     const colors: Record<StepType, string> = {
-      move: "#3b82f6",     // 蓝色
-      damage: "#ef4444",   // 红色
-      effect: "#8b5cf6",   // 紫色
-      wait: "#6b7280",     // 灰色
-      camera: "#f59e0b",   // 橙色
-      shake: "#ec4899",    // 粉色
+      move: "#3b82f6", // 蓝色
+      damage: "#ef4444", // 红色
+      effect: "#8b5cf6", // 紫色
+      wait: "#6b7280", // 灰色
+      camera: "#f59e0b", // 橙色
+      shake: "#ec4899", // 粉色
       background: "#10b981", // 绿色
     };
     return colors[type] ?? "#6b7280";

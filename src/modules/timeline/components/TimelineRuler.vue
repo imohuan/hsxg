@@ -53,11 +53,11 @@ interface TickMark {
 const tickMarks = computed<TickMark[]>(() => {
   const marks: TickMark[] = [];
   const totalSeconds = props.totalFrames / props.fps;
-  
+
   // 根据缩放级别决定刻度间隔
   let majorInterval: number; // 主刻度间隔（秒）
   let minorInterval: number; // 次刻度间隔（秒）
-  
+
   if (props.zoom >= 2) {
     majorInterval = 0.5;
     minorInterval = 0.1;
@@ -71,19 +71,19 @@ const tickMarks = computed<TickMark[]>(() => {
     majorInterval = 5;
     minorInterval = 1;
   }
-  
+
   // 生成刻度
   for (let time = 0; time <= totalSeconds; time += minorInterval) {
-    const isMajor = Math.abs(time % majorInterval) < 0.001 || Math.abs(time % majorInterval - majorInterval) < 0.001;
+    const isMajor = Math.abs(time % majorInterval) < 0.001 || Math.abs((time % majorInterval) - majorInterval) < 0.001;
     const position = time * props.pixelsPerSecond * props.zoom;
-    
+
     marks.push({
       position,
       label: isMajor ? formatTime(time) : "",
       isMajor,
     });
   }
-  
+
   return marks;
 });
 
@@ -100,24 +100,24 @@ function formatTime(seconds: number): string {
 // 点击刻度尺跳转
 function handleRulerClick(event: MouseEvent) {
   if (!rulerRef.value) return;
-  
+
   const rect = rulerRef.value.getBoundingClientRect();
   const x = event.clientX - rect.left + rulerRef.value.scrollLeft;
   const time = x / (props.pixelsPerSecond * props.zoom);
   const frame = Math.round(time * props.fps);
-  
+
   emit("seek", Math.max(0, Math.min(frame, props.totalFrames)));
 }
 
 // 滚轮缩放
 function handleWheel(event: WheelEvent) {
   if (!event.ctrlKey) return;
-  
+
   event.preventDefault();
-  
+
   const delta = event.deltaY > 0 ? -0.1 : 0.1;
   const newZoom = Math.max(0.25, Math.min(4, props.zoom + delta));
-  
+
   emit("zoomChange", newZoom);
 }
 
@@ -134,38 +134,32 @@ onUnmounted(() => {
 <template>
   <div
     ref="rulerRef"
-    class="relative h-8 cursor-pointer select-none overflow-hidden bg-gray-800"
+    class="relative h-8 cursor-pointer overflow-hidden bg-slate-100 select-none"
     @click="handleRulerClick"
   >
     <!-- 刻度容器 -->
-    <div
-      class="relative h-full"
-      :style="{ width: `${totalWidth}px` }"
-    >
+    <div class="relative h-full" :style="{ width: `${totalWidth}px` }">
       <!-- 刻度标记 -->
       <template v-for="(tick, index) in tickMarks" :key="index">
         <div
           class="absolute bottom-0"
-          :class="tick.isMajor ? 'h-4 w-px bg-gray-400' : 'h-2 w-px bg-gray-600'"
+          :class="tick.isMajor ? 'h-4 w-px bg-slate-400' : 'h-2 w-px bg-slate-300'"
           :style="{ left: `${tick.position}px` }"
         />
         <span
           v-if="tick.label"
-          class="absolute top-0.5 -translate-x-1/2 text-xs text-gray-400"
+          class="absolute top-1 -translate-x-1/2 font-mono text-[10px] text-slate-500"
           :style="{ left: `${tick.position}px` }"
         >
           {{ tick.label }}
         </span>
       </template>
-      
+
       <!-- 时间指示器 -->
-      <div
-        class="absolute top-0 h-full w-0.5 bg-red-500"
-        :style="{ left: `${indicatorPosition}px` }"
-      >
+      <div class="absolute top-0 h-full w-0.5 bg-indigo-500 shadow-sm" :style="{ left: `${indicatorPosition}px` }">
         <!-- 指示器头部 -->
         <div
-          class="absolute -left-1.5 -top-0.5 size-0 border-x-[6px] border-t-8 border-x-transparent border-t-red-500"
+          class="absolute -top-0.5 -left-1.5 size-0 border-x-[6px] border-t-8 border-x-transparent border-t-indigo-500"
         />
       </div>
     </div>

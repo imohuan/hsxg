@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, provide, toRef } from "vue";
+import { ref, computed, provide } from "vue";
 import { PlayArrowOutlined, PauseOutlined, AddOutlined } from "@vicons/material";
-import type { TimelineSegment, TimelineTrack, SkillStep, StepType } from "@/types";
+import type { TimelineSegment, TimelineTrack, SkillStep, StepType, StepParams } from "@/types";
 import { useTimeline } from "../composables/useTimeline";
 import { useDragDrop } from "../composables/useDragDrop";
 import TimelineRuler from "./TimelineRuler.vue";
@@ -40,9 +40,7 @@ const emit = defineEmits<{
 const fpsRef = ref(props.fps);
 const totalFramesRef = ref(props.totalFrames);
 const segments = ref<TimelineSegment[]>([]);
-const tracks = ref<TimelineTrack[]>([
-  { id: "track_default_1", name: "轨道 1", locked: false, hidden: false },
-]);
+const tracks = ref<TimelineTrack[]>([{ id: "track_default_1", name: "轨道 1", locked: false, hidden: false }]);
 const steps = ref<SkillStep[]>([]);
 
 // 使用时间轴 Hook
@@ -149,11 +147,7 @@ function handleDeleteSegment(segmentId: string) {
 }
 
 // 开始拖拽
-function handleDragStart(
-  segmentId: string,
-  mode: "move" | "resize-start" | "resize-end",
-  event: MouseEvent,
-) {
+function handleDragStart(segmentId: string, mode: "move" | "resize-start" | "resize-end", event: MouseEvent) {
   dragDrop.startDrag(segmentId, mode, event);
 }
 
@@ -168,7 +162,7 @@ function handleZoomChange(newZoom: number) {
 }
 
 // 更新步骤参数
-function handleUpdateStepParams(stepId: string, params: Record<string, unknown>) {
+function handleUpdateStepParams(stepId: string, params: Partial<StepParams>) {
   const step = steps.value.find((s) => s.id === stepId);
   if (step) {
     Object.assign(step.params, params);
@@ -199,7 +193,7 @@ function addStep(type: StepType, trackId: string, startFrame: number): void {
     type,
     params: {},
   };
-  
+
   const segment = timeline.addSegment(step, trackId, startFrame);
   if (segment) {
     emit("stepsChange", steps.value);
@@ -214,7 +208,7 @@ function handleTrackClick(event: MouseEvent, trackId: string) {
   const rect = target.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const frame = pxToFrame(x);
-  
+
   // 默认添加移动步骤
   addStep("move", trackId, frame);
 }
@@ -226,74 +220,74 @@ provide("pxToFrame", pxToFrame);
 </script>
 
 <template>
-  <div class="flex h-full flex-col bg-gray-900">
+  <div class="flex h-full flex-col bg-slate-50">
     <!-- 工具栏 -->
-    <div class="flex items-center gap-2 border-b border-gray-700 bg-gray-800 px-4 py-2">
+    <div class="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
       <!-- 播放控制 -->
       <button
-        class="rounded p-1.5 hover:bg-gray-700"
-        :class="timeline.isPlaying.value ? 'text-yellow-500' : 'text-white'"
+        class="flex size-9 items-center justify-center rounded-lg transition-colors"
+        :class="
+          timeline.isPlaying.value ? 'bg-amber-100 text-amber-600' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+        "
         :title="timeline.isPlaying.value ? '暂停' : '播放'"
         @click="timeline.isPlaying.value ? timeline.pause() : timeline.play()"
       >
-        <component
-          :is="timeline.isPlaying.value ? PauseOutlined : PlayArrowOutlined"
-          class="size-5"
-        />
+        <component :is="timeline.isPlaying.value ? PauseOutlined : PlayArrowOutlined" class="size-5" />
       </button>
-      
+
       <!-- 时间显示 -->
-      <div class="min-w-20 text-sm text-gray-400">
+      <div class="min-w-24 font-mono text-sm text-slate-600">
         {{ timeline.currentTime.value.toFixed(2) }}s / {{ timeline.totalDuration.value.toFixed(2) }}s
       </div>
-      
+
       <!-- 分隔线 -->
-      <div class="h-5 w-px bg-gray-600" />
-      
+      <div class="h-5 w-px bg-slate-200" />
+
       <!-- 帧数显示 -->
-      <div class="text-sm text-gray-400">
-        帧: {{ timeline.currentFrame.value }} / {{ totalFramesRef }}
+      <div class="text-sm text-slate-500">
+        帧: <span class="font-mono font-medium text-indigo-600">{{ timeline.currentFrame.value }}</span> /
+        {{ totalFramesRef }}
       </div>
-      
+
       <!-- 分隔线 -->
-      <div class="h-5 w-px bg-gray-600" />
-      
+      <div class="h-5 w-px bg-slate-200" />
+
       <!-- 缩放控制 -->
       <div class="flex items-center gap-2">
-        <span class="text-sm text-gray-400">缩放:</span>
+        <span class="text-sm text-slate-500">缩放:</span>
         <input
           type="range"
           :value="timeline.zoom.value"
           min="0.25"
           max="4"
           step="0.25"
-          class="w-24"
+          class="h-1.5 w-24 cursor-pointer appearance-none rounded-full bg-slate-200 accent-indigo-600"
           @input="handleZoomChange(Number(($event.target as HTMLInputElement).value))"
         />
-        <span class="min-w-10 text-sm text-gray-400">{{ (timeline.zoom.value * 100).toFixed(0) }}%</span>
+        <span class="min-w-12 font-mono text-sm text-slate-600">{{ (timeline.zoom.value * 100).toFixed(0) }}%</span>
       </div>
-      
+
       <!-- 弹性空间 -->
       <div class="flex-1" />
-      
+
       <!-- 添加轨道按钮 -->
       <button
-        class="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
+        class="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
         @click="handleAddTrack"
       >
         <AddOutlined class="size-4" />
         添加轨道
       </button>
     </div>
-    
+
     <!-- 主内容区域 -->
     <div class="flex flex-1 overflow-hidden">
       <!-- 时间轴区域 -->
       <div class="flex flex-1 flex-col overflow-hidden">
         <!-- 刻度尺 -->
-        <div class="flex shrink-0 border-b border-gray-700">
+        <div class="flex shrink-0 border-b border-slate-200">
           <!-- 左侧占位 -->
-          <div class="w-40 shrink-0 border-r border-gray-700 bg-gray-800" />
+          <div class="w-44 shrink-0 border-r border-slate-200 bg-slate-100" />
           <!-- 刻度尺 -->
           <div class="flex-1 overflow-x-auto">
             <TimelineRuler
@@ -307,9 +301,9 @@ provide("pxToFrame", pxToFrame);
             />
           </div>
         </div>
-        
+
         <!-- 轨道区域 -->
-        <div class="flex-1 overflow-auto">
+        <div class="flex-1 overflow-auto bg-white">
           <TimelineTrackComponent
             v-for="track in tracks"
             :key="track.id"
@@ -324,11 +318,8 @@ provide("pxToFrame", pxToFrame);
           >
             <template #segments="{ segments: trackSegments, track: currentTrack }">
               <!-- 可点击区域 -->
-              <div
-                class="absolute inset-0"
-                @click="handleTrackClick($event, currentTrack.id)"
-              />
-              
+              <div class="absolute inset-0" @click="handleTrackClick($event, currentTrack.id)" />
+
               <!-- 片段 -->
               <TimelineSegmentComponent
                 v-for="segment in trackSegments"
@@ -342,25 +333,21 @@ provide("pxToFrame", pxToFrame);
                 @delete="handleDeleteSegment"
                 @drag-start="handleDragStart"
               />
-              
+
               <!-- 吸附辅助线 -->
               <div
                 v-if="dragDrop.activeSnapPoint.value && dragDrop.dragState.value.isDragging"
-                class="absolute top-0 h-full w-px bg-yellow-400"
+                class="absolute top-0 h-full w-0.5 bg-amber-400 shadow-sm"
                 :style="{ left: `${frameToPx(dragDrop.activeSnapPoint.value.frame)}px` }"
               />
             </template>
           </TimelineTrackComponent>
         </div>
       </div>
-      
+
       <!-- 步骤编辑器面板 -->
-      <div class="w-64 shrink-0 border-l border-gray-700">
-        <StepEditor
-          :step="selectedStep"
-          @update="handleUpdateStepParams"
-          @update-type="handleUpdateStepType"
-        />
+      <div class="w-72 shrink-0 border-l border-slate-200 bg-white">
+        <StepEditor :step="selectedStep" @update="handleUpdateStepParams" @update-type="handleUpdateStepType" />
       </div>
     </div>
   </div>

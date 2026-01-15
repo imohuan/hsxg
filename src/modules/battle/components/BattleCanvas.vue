@@ -161,10 +161,7 @@ defineExpose({
     />
 
     <!-- 加载遮罩 -->
-    <div
-      v-if="isLoading"
-      class="absolute inset-0 flex items-center justify-center bg-black/50"
-    >
+    <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-black/50">
       <div class="flex flex-col items-center gap-2">
         <div class="size-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
         <span class="text-sm text-white">加载中...</span>
@@ -172,10 +169,7 @@ defineExpose({
     </div>
 
     <!-- 未初始化提示 -->
-    <div
-      v-if="!isInitialized && !isLoading"
-      class="absolute inset-0 flex items-center justify-center bg-gray-900"
-    >
+    <div v-if="!isInitialized && !isLoading" class="absolute inset-0 flex items-center justify-center bg-gray-900">
       <span class="text-gray-500">初始化战斗场景...</span>
     </div>
   </div>

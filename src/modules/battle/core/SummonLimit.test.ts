@@ -37,10 +37,7 @@ interface SummonResult {
  * @param summonUnitId 要召唤的单位 ID
  * @returns 召唤结果
  */
-function executeSummon(
-  currentPlayerUnits: SimpleUnitConfig[],
-  summonUnitId: string | undefined,
-): SummonResult {
+function executeSummon(currentPlayerUnits: SimpleUnitConfig[], summonUnitId: string | undefined): SummonResult {
   // 检查召唤数量限制
   if (currentPlayerUnits.length >= MAX_TEAM_SIZE) {
     return {
@@ -93,8 +90,7 @@ const arbitraryPlayerUnits = (): fc.Arbitrary<SimpleUnitConfig[]> =>
 /**
  * 生成可选的召唤单位 ID
  */
-const arbitrarySummonId = (): fc.Arbitrary<string | undefined> =>
-  fc.oneof(fc.uuid(), fc.constant(undefined));
+const arbitrarySummonId = (): fc.Arbitrary<string | undefined> => fc.oneof(fc.uuid(), fc.constant(undefined));
 
 describe("召唤限制属性测试", () => {
   /**
@@ -105,17 +101,13 @@ describe("召唤限制属性测试", () => {
    */
   it("Property 4: 召唤后队伍人数不应超过 6 个", () => {
     fc.assert(
-      fc.property(
-        arbitraryPlayerUnits(),
-        arbitrarySummonId(),
-        (playerUnits, summonId) => {
-          const result = executeSummon(playerUnits, summonId);
+      fc.property(arbitraryPlayerUnits(), arbitrarySummonId(), (playerUnits, summonId) => {
+        const result = executeSummon(playerUnits, summonId);
 
-          // 核心断言：无论召唤成功与否，队伍人数都不应超过 6
-          expect(isTeamSizeValid(result.newTeamSize)).toBe(true);
-          expect(result.newTeamSize).toBeLessThanOrEqual(MAX_TEAM_SIZE);
-        },
-      ),
+        // 核心断言：无论召唤成功与否，队伍人数都不应超过 6
+        expect(isTeamSizeValid(result.newTeamSize)).toBe(true);
+        expect(result.newTeamSize).toBeLessThanOrEqual(MAX_TEAM_SIZE);
+      }),
       { numRuns: 100 },
     );
   });
@@ -170,17 +162,14 @@ describe("召唤限制属性测试", () => {
    */
   it("Property 4 补充: 未指定召唤目标时召唤应失败", () => {
     fc.assert(
-      fc.property(
-        arbitraryPlayerUnits(),
-        (playerUnits) => {
-          const result = executeSummon(playerUnits, undefined);
+      fc.property(arbitraryPlayerUnits(), (playerUnits) => {
+        const result = executeSummon(playerUnits, undefined);
 
-          // 未指定召唤目标时，召唤应失败
-          expect(result.success).toBe(false);
-          // 队伍人数应保持不变
-          expect(result.newTeamSize).toBe(playerUnits.length);
-        },
-      ),
+        // 未指定召唤目标时，召唤应失败
+        expect(result.success).toBe(false);
+        // 队伍人数应保持不变
+        expect(result.newTeamSize).toBe(playerUnits.length);
+      }),
       { numRuns: 100 },
     );
   });
@@ -210,10 +199,7 @@ describe("召唤限制属性测试", () => {
 
             // 如果召唤成功，更新队伍
             if (result.success) {
-              currentTeam = [
-                ...currentTeam,
-                { id: `summoned_${summonId}`, isPlayer: true, isAlive: true },
-              ];
+              currentTeam = [...currentTeam, { id: `summoned_${summonId}`, isPlayer: true, isAlive: true }];
             }
           }
 

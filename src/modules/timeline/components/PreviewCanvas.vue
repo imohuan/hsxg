@@ -126,7 +126,6 @@ class PreviewScene extends Phaser.Scene {
   private attackerSprite: Phaser.GameObjects.Rectangle | null = null;
   private targetSprites: Phaser.GameObjects.Rectangle[] = [];
   private context: ExecutionContext;
-  private damageTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super({ key: "PreviewScene" });
@@ -174,10 +173,12 @@ class PreviewScene extends Phaser.Scene {
     this.attackerSprite.setStrokeStyle(2, 0x60a5fa);
 
     // 添加标签
-    this.add.text(attackerX, attackerY - 45, "攻击方", {
-      fontSize: "12px",
-      color: "#60a5fa",
-    }).setOrigin(0.5);
+    this.add
+      .text(attackerX, attackerY - 45, "攻击方", {
+        fontSize: "12px",
+        color: "#60a5fa",
+      })
+      .setOrigin(0.5);
 
     // 更新上下文
     this.context.attackerPosition = { x: attackerX, y: attackerY };
@@ -210,10 +211,12 @@ class PreviewScene extends Phaser.Scene {
       this.context.targetPositions.push({ x: targetX, y });
 
       // 添加标签
-      this.add.text(targetX, y - 45, `目标 ${i + 1}`, {
-        fontSize: "12px",
-        color: "#f87171",
-      }).setOrigin(0.5);
+      this.add
+        .text(targetX, y - 45, `目标 ${i + 1}`, {
+          fontSize: "12px",
+          color: "#f87171",
+        })
+        .setOrigin(0.5);
     }
 
     // 更新执行器上下文
@@ -249,7 +252,7 @@ class PreviewScene extends Phaser.Scene {
           });
         }
       },
-      onEffect: (effectId, x, y) => {
+      onEffect: (_effectId, x, y) => {
         // 简单的特效表示
         const circle = this.add.circle(x, y, 30, 0x8b5cf6, 0.7);
         this.tweens.add({
@@ -279,11 +282,13 @@ class PreviewScene extends Phaser.Scene {
   /** 显示伤害数字 */
   private showDamage(x: number, y: number, value: number): void {
     const color = value > 0 ? "#ef4444" : "#22c55e";
-    const text = this.add.text(x, y, `${value > 0 ? "-" : "+"}${Math.abs(value)}`, {
-      fontSize: "18px",
-      color,
-      fontStyle: "bold",
-    }).setOrigin(0.5);
+    const text = this.add
+      .text(x, y, `${value > 0 ? "-" : "+"}${Math.abs(value)}`, {
+        fontSize: "18px",
+        color,
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
 
     this.tweens.add({
       targets: text,
@@ -419,119 +424,115 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex flex-col bg-gray-800 rounded-lg overflow-hidden">
+  <div class="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
     <!-- 工具栏 -->
-    <div class="flex items-center gap-2 px-3 py-2 border-b border-gray-700">
+    <div class="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
       <!-- 播放控制 -->
       <div class="flex items-center gap-1">
         <button
-          class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+          class="flex size-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
           title="后退一帧"
           @click="preview.stepBackward()"
         >
           <SkipPreviousOutlined class="size-4" />
         </button>
-        
+
         <button
-          class="p-1.5 rounded hover:bg-gray-700"
-          :class="preview.isPlaying.value ? 'text-yellow-500' : 'text-white'"
+          class="flex size-9 items-center justify-center rounded-lg transition-colors"
+          :class="
+            preview.isPlaying.value ? 'bg-amber-100 text-amber-600' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+          "
           :title="preview.isPlaying.value ? '暂停' : '播放'"
           @click="preview.toggle()"
         >
-          <component
-            :is="preview.isPlaying.value ? PauseOutlined : PlayArrowOutlined"
-            class="size-5"
-          />
+          <component :is="preview.isPlaying.value ? PauseOutlined : PlayArrowOutlined" class="size-5" />
         </button>
-        
+
         <button
-          class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+          class="flex size-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
           title="停止"
           @click="handleStop"
         >
           <StopOutlined class="size-4" />
         </button>
-        
+
         <button
-          class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+          class="flex size-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
           title="前进一帧"
           @click="preview.stepForward()"
         >
           <SkipNextOutlined class="size-4" />
         </button>
       </div>
-      
+
       <!-- 分隔线 -->
-      <div class="w-px h-5 bg-gray-600" />
-      
+      <div class="h-5 w-px bg-slate-200" />
+
       <!-- 时间显示 -->
-      <div class="text-xs text-gray-400 min-w-16">
-        {{ preview.currentTime.value.toFixed(2) }}s
-      </div>
-      
+      <div class="min-w-16 font-mono text-xs text-slate-600">{{ preview.currentTime.value.toFixed(2) }}s</div>
+
       <!-- 进度条 -->
-      <div class="flex-1 mx-2">
+      <div class="mx-2 flex-1">
         <input
           type="range"
           :value="preview.progress.value * 100"
           min="0"
           max="100"
           step="0.1"
-          class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+          class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-indigo-600"
           @input="preview.seekToProgress(Number(($event.target as HTMLInputElement).value) / 100)"
         />
       </div>
-      
+
       <!-- 分隔线 -->
-      <div class="w-px h-5 bg-gray-600" />
-      
+      <div class="h-5 w-px bg-slate-200" />
+
       <!-- 缩放控制 -->
       <div class="flex items-center gap-1">
         <button
-          class="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+          class="flex size-7 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
           title="缩小"
           @click="zoomOut"
         >
           <ZoomOutOutlined class="size-4" />
         </button>
-        <span class="text-xs text-gray-400 min-w-8 text-center">
+        <span class="min-w-10 text-center font-mono text-xs text-slate-600">
           {{ (canvasZoom * 100).toFixed(0) }}%
         </span>
         <button
-          class="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+          class="flex size-7 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
           title="放大"
           @click="zoomIn"
         >
           <ZoomInOutlined class="size-4" />
         </button>
       </div>
-      
+
       <!-- 分隔线 -->
-      <div class="w-px h-5 bg-gray-600" />
-      
+      <div class="h-5 w-px bg-slate-200" />
+
       <!-- 设置按钮 -->
       <button
-        class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-        :class="{ 'text-blue-500': showSettings }"
+        class="flex size-8 items-center justify-center rounded-lg transition-colors"
+        :class="
+          showSettings ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+        "
         title="设置"
         @click="showSettings = !showSettings"
       >
         <SettingsOutlined class="size-4" />
       </button>
     </div>
-    
+
     <!-- 设置面板 -->
-    <div
-      v-if="showSettings"
-      class="px-3 py-2 border-b border-gray-700 bg-gray-750"
-    >
-      <div class="flex items-center gap-4 text-sm">
+    <div v-if="showSettings" class="border-b border-slate-100 bg-slate-50/50 px-4 py-2.5">
+      <div class="flex items-center gap-6 text-sm">
         <!-- 被攻击方数量 -->
         <div class="flex items-center gap-2">
-          <span class="text-gray-400">被攻击方数量:</span>
+          <span class="text-xs text-slate-500">被攻击方数量:</span>
           <select
             v-model="targetCount"
-            class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs"
+            class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 transition-colors outline-none focus:border-indigo-400"
           >
             <option :value="1">1</option>
             <option :value="2">2</option>
@@ -539,13 +540,13 @@ defineExpose({
             <option :value="4">4</option>
           </select>
         </div>
-        
+
         <!-- 播放速度 -->
         <div class="flex items-center gap-2">
-          <span class="text-gray-400">播放速度:</span>
+          <span class="text-xs text-slate-500">播放速度:</span>
           <select
             v-model="preview.playbackRate.value"
-            class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs"
+            class="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 transition-colors outline-none focus:border-indigo-400"
           >
             <option :value="0.25">0.25x</option>
             <option :value="0.5">0.5x</option>
@@ -554,27 +555,30 @@ defineExpose({
             <option :value="2">2x</option>
           </select>
         </div>
-        
+
         <!-- 循环播放 -->
-        <label class="flex items-center gap-2 cursor-pointer">
+        <label class="flex cursor-pointer items-center gap-2">
           <input
             v-model="preview.loop.value"
             type="checkbox"
-            class="rounded border-gray-600 bg-gray-700 text-blue-500"
+            class="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
           />
-          <span class="text-gray-400">循环播放</span>
+          <span class="text-xs text-slate-500">循环播放</span>
         </label>
       </div>
     </div>
-    
+
     <!-- 画布区域 -->
     <div
-      class="relative flex-1 overflow-auto bg-gray-900 flex items-center justify-center"
+      class="relative flex flex-1 items-center justify-center overflow-auto bg-slate-100"
       :style="{ minHeight: `${height + 20}px` }"
     >
+      <!-- 棋盘格背景 -->
+      <div class="checkerboard-bg absolute inset-0" />
+
       <div
         ref="containerRef"
-        class="preview-canvas"
+        class="preview-canvas relative"
         :style="{
           width: `${width}px`,
           height: `${height}px`,
@@ -582,24 +586,44 @@ defineExpose({
           transformOrigin: 'center center',
         }"
       />
-      
+
       <!-- 加载遮罩 -->
-      <div
-        v-if="!isInitialized"
-        class="absolute inset-0 flex items-center justify-center bg-gray-900"
-      >
+      <div v-if="!isInitialized" class="absolute inset-0 flex items-center justify-center bg-slate-100">
         <div class="flex flex-col items-center gap-2">
-          <div class="size-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <span class="text-xs text-gray-500">初始化预览...</span>
+          <div class="size-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+          <span class="text-xs text-slate-500">初始化预览...</span>
         </div>
       </div>
     </div>
-    
+
     <!-- 状态栏 -->
-    <div class="flex items-center justify-between px-3 py-1.5 border-t border-gray-700 text-xs text-gray-500">
-      <span>帧: {{ preview.currentFrame.value }} / {{ totalFrames }}</span>
-      <span>FPS: {{ fps }}</span>
-      <span>激活片段: {{ preview.activeSegments.value.length }}</span>
+    <div
+      class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-1.5 text-xs text-slate-500"
+    >
+      <span
+        >帧: <span class="font-mono font-medium text-slate-700">{{ preview.currentFrame.value }}</span> /
+        {{ totalFrames }}</span
+      >
+      <span
+        >FPS: <span class="font-mono font-medium text-slate-700">{{ fps }}</span></span
+      >
+      <span
+        >激活片段:
+        <span class="font-mono font-medium text-slate-700">{{ preview.activeSegments.value.length }}</span></span
+      >
     </div>
   </div>
 </template>
+
+<style scoped>
+.checkerboard-bg {
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%, transparent 75%, #e2e8f0 75%, #e2e8f0),
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%, transparent 75%, #e2e8f0 75%, #e2e8f0);
+  background-size: 24px 24px;
+  background-position:
+    0 0,
+    12px 12px;
+}
+</style>
