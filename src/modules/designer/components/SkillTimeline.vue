@@ -1052,13 +1052,13 @@ watch(
               v-for="item in timelineItems"
               :key="item.id"
               v-show="!tracks.find((t) => t.id === item.trackId)?.hidden"
-              class="group pointer-events-auto absolute overflow-hidden rounded-lg border border-white/50 shadow-sm"
+              class="group pointer-events-auto absolute rounded-lg border-2 border-white/30 shadow-sm"
               :class="[
                 item.colorClass,
                 dragging && dragging.itemId === item.id
-                  ? 'z-50 opacity-90 shadow-xl ring-2 ring-indigo-400'
+                  ? 'z-50 opacity-90 shadow-xl border-indigo-400'
                   : 'z-10 hover:shadow-md hover:brightness-105',
-                selectedStepIndex === item.stepIndex ? 'ring-2 ring-indigo-500 ring-offset-1' : '',
+                selectedStepIndex === item.stepIndex ? 'border-indigo-500 shadow-indigo-200' : '',
                 isTrackLocked(item.trackId) ? 'cursor-not-allowed opacity-60' : 'cursor-grab',
               ]"
               :style="{
@@ -1122,6 +1122,12 @@ watch(
                   />
                 </svg>
               </button>
+
+              <!-- 选中指示小圆点（hover 时隐藏，让位给删除按钮） -->
+              <div
+                v-if="selectedStepIndex === item.stepIndex"
+                class="absolute top-1 right-1 size-2 rounded-full bg-white shadow group-hover:hidden"
+              />
             </div>
 
             <!-- 从库拖拽时的临时标签 -->
