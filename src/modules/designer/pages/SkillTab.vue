@@ -14,6 +14,7 @@ import SkillTabPanel from "../components/SkillTabPanel.vue";
 import type { SkillDesign, SkillStep, StepType, TimelineSegment } from "@/types";
 import type { LibraryDragPayload } from "../composables/useLibraryDragToTimeline";
 import { DEFAULT_ACTOR_ID, DEFAULT_TARGET_IDS } from "../core/sandboxConfig";
+import { useSplitPane } from "../composables/useSplitPane";
 
 // ============ Store ============
 
@@ -76,7 +77,8 @@ const skillTimelineSegments = computed<TimelineSegment[]>(() => {
         ? params.duration
         : Number(params.duration) || STEP_FRAME_DEFAULT[step.type] || 30;
     const frames = Math.max(1, Math.min(MAX_FRAMES_PER_STEP, Math.round(raw)));
-    const hasStartFrame = typeof params.startFrame === "number" && Number.isFinite(params.startFrame);
+    const hasStartFrame =
+      typeof params.startFrame === "number" && Number.isFinite(params.startFrame);
     const start = hasStartFrame ? Math.max(0, Math.round(params.startFrame as number)) : cursor;
 
     const segment: TimelineSegment = {
@@ -250,13 +252,14 @@ function updateStepParam(payload: { key: string; value: string | number | boolea
 }
 
 // 处理时间轴片段更新
-function handleUpdateSegment(index: number, start: number, end: number): void {
+function handleUpdateSegment(index: number, start: number, end: number, trackId?: string): void {
   const step = currentSkillData.steps[index];
   if (step) {
     const frames = Math.max(1, end - start);
     const params = step.params as Record<string, unknown>;
     params.duration = frames;
     params.startFrame = Math.max(0, Math.round(start));
+    if (trackId) params.trackId = trackId;
     saveCurrentSkillData();
   }
 }
@@ -291,11 +294,28 @@ function handleDropStepFromLibrary(payload: LibraryDragPayload): void {
 function handleToggleTarget(unitId: string): void {
   const exists = currentSkillData.selectedTargetIds.includes(unitId);
   if (exists) {
-    currentSkillData.selectedTargetIds = currentSkillData.selectedTargetIds.filter((id) => id !== unitId);
+    currentSkillData.selectedTargetIds = currentSkillData.selectedTargetIds.filter(
+      (id) => id !== unitId,
+    );
   } else {
     currentSkillData.selectedTargetIds = [...currentSkillData.selectedTargetIds, unitId];
   }
 }
+
+// ============ 分割面板 ============
+
+const {
+  containerRef: splitContainerRef,
+  topStyle: previewStyle,
+  bottomStyle: timelineStyle,
+  isDragging: isSplitDragging,
+  startDrag: startSplitDrag,
+} = useSplitPane({
+  storageKey: "skill-tab-split-percent",
+  initialTopPercent: 45,
+  minTopPercent: 25,
+  maxTopPercent: 70,
+});
 
 // ============ 监听 ============
 
@@ -343,7 +363,9 @@ watch(
               <div class="min-w-0 flex-1">
                 <p
                   class="truncate text-sm font-medium"
-                  :class="designerStore.currentSkillId === skill.id ? 'text-indigo-600' : 'text-slate-700'"
+                  :class="
+                    designerStore.currentSkillId === skill.id ? 'text-indigo-600' : 'text-slate-700'
+                  "
                 >
                   {{ skill.name }}
                 </p>
@@ -422,9 +444,13 @@ watch(
 
     <!-- 右侧编辑区域 -->
     <template #right>
-      <div v-if="currentSkill" class="flex h-full w-full flex-col overflow-hidden">
+      <div
+        v-if="currentSkill"
+        ref="splitContainerRef"
+        class="flex h-full w-full flex-col overflow-hidden"
+      >
         <!-- 预览画布 -->
-        <div class="aspect-video w-full shrink-0 overflow-hidden">
+        <div class="shrink-0 overflow-hidden" :style="previewStyle">
           <SkillBattlePreview
             :current-frame="currentFrame"
             :total-frames="totalFrames"
@@ -439,6 +465,23 @@ watch(
           />
         </div>
 
+        <!-- 拖拽分割条 -->
+        <div
+          class="group relative z-10 flex h-1 shrink-0 cursor-row-resize items-center justify-center bg-slate-200 transition-colors hover:bg-indigo-400"
+          :class="{ 'bg-indigo-500': isSplitDragging }"
+          @mousedown="startSplitDrag"
+        >
+          <!-- 拖拽手柄指示器 -->
+          <div
+            class="absolute flex h-4 w-12 items-center justify-center rounded-full bg-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
+            :class="{ 'opacity-100 bg-indigo-500': isSplitDragging }"
+          >
+            <div class="flex gap-0.5">
+              <div class="h-0.5 w-3 rounded-full bg-white" />
+            </div>
+          </div>
+        </div>
+
         <!-- 时间轴控制栏 -->
         <SkillTimelineControls
           :total-frames="totalFrames"
@@ -451,7 +494,7 @@ watch(
         />
 
         <!-- 时间轴编辑器 -->
-        <div class="min-h-0 flex-1">
+        <div class="min-h-0 flex-1" :style="timelineStyle">
           <SkillTimeline
             :segments="skillTimelineSegments"
             :total-frames="totalFrames"
@@ -470,8 +513,15 @@ watch(
       <!-- 空状态 -->
       <div v-else class="flex h-full items-center justify-center bg-slate-50">
         <div class="text-center">
-          <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100">
-            <svg class="size-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div
+            class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100"
+          >
+            <svg
+              class="size-8 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
