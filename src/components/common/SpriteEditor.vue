@@ -4,8 +4,8 @@
  * 实现图片上传、网格配置、帧预览
  */
 import { ref, computed, watch } from "vue";
-import { useSpriteSheet, type SpriteFrame } from "../composables/useSpriteSheet";
-import type { SpriteConfig } from "../../../types";
+import { useSpriteSheet, type SpriteFrame } from "@/modules/designer/composables/useSpriteSheet";
+import type { SpriteConfig } from "@/types";
 
 // ============ Props & Emits ============
 
@@ -176,7 +176,13 @@ watch(
       </svg>
       上传雪碧图
     </button>
-    <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleFileChange" />
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept="image/*"
+      class="hidden"
+      @change="handleFileChange"
+    />
 
     <!-- 网格配置 -->
     <div class="grid grid-cols-3 gap-2">
@@ -215,9 +221,15 @@ watch(
 
     <!-- 帧列表标题 -->
     <div class="flex items-center justify-between">
-      <span class="text-sm font-medium text-slate-700">帧列表 ({{ spriteSheet.totalFrames.value }})</span>
+      <span class="text-sm font-medium text-slate-700"
+        >帧列表 ({{ spriteSheet.totalFrames.value }})</span
+      >
       <label class="flex cursor-pointer items-center gap-1.5">
-        <input v-model="showGrid" type="checkbox" class="size-3.5 rounded border-slate-300 text-indigo-500" />
+        <input
+          v-model="showGrid"
+          type="checkbox"
+          class="size-3.5 rounded border-slate-300 text-indigo-500"
+        />
         <span class="text-xs text-slate-500">网格</span>
       </label>
     </div>
@@ -230,7 +242,10 @@ watch(
       </div>
 
       <!-- 错误状态 -->
-      <div v-else-if="spriteSheet.error.value" class="flex h-32 items-center justify-center text-sm text-red-500">
+      <div
+        v-else-if="spriteSheet.error.value"
+        class="flex h-32 items-center justify-center text-sm text-red-500"
+      >
         {{ spriteSheet.error.value }}
       </div>
 

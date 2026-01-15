@@ -23,23 +23,23 @@ const routes: RouteRecordRaw[] = [
           {
             path: "character",
             name: "DesignerCharacter",
-            component: () => import("@/modules/designer/pages/CharacterTab.vue"),
+            component: () => import("@/modules/character/pages/CharacterPage.vue"),
           },
           {
             path: "effect",
             name: "DesignerEffect",
-            component: () => import("@/modules/designer/pages/EffectTab.vue"),
+            component: () => import("@/modules/effect/pages/EffectPage.vue"),
           },
           {
             path: "skill",
             name: "DesignerSkill",
-            component: () => import("@/modules/designer/pages/SkillTab.vue"),
+            component: () => import("@/modules/skill/pages/SkillPage.vue"),
           },
           {
             path: "json",
             name: "DesignerJson",
-            component: () => import("@/modules/designer/pages/JsonTab.vue"),
-          },
+            component: () => import("@/modules/json-config/pages/JsonConfigPage.vue"),
+          }
         ],
       },
     ],

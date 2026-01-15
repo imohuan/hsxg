@@ -1,48 +1,40 @@
 <script setup lang="ts">
 /**
- * @file 特效编辑标签页
- * @description 整合雪碧图编辑器、特效面板和动画预览组件（现代 SaaS 风格）
+ * @file 角色编辑页面
+ * @description 整合雪碧图编辑器、角色面板和动画预览组件（现代 SaaS 风格）
  */
 import { ref, computed, reactive } from "vue";
 import { RefreshOutlined, UploadFileOutlined, SaveOutlined } from "@vicons/material";
 import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
-import DesignerLibraryPanel from "../components/DesignerLibraryPanel.vue";
-import DesignerCanvasPreview from "../components/DesignerCanvasPreview.vue";
-import DesignerTimeline from "../components/DesignerTimeline.vue";
-import type { LibraryItem } from "../components/DesignerLibraryPanel.vue";
-import type { SpriteSheetPreviewConfig } from "../core/PreviewPlayer";
+import LibraryPanel from "@/components/common/LibraryPanel.vue";
+import CanvasPreview from "@/components/common/CanvasPreview.vue";
+import Timeline from "@/components/common/Timeline.vue";
+import type { LibraryItem } from "@/components/common/LibraryPanel.vue";
+import type { SpriteSheetPreviewConfig } from "@/modules/designer/core/PreviewPlayer";
 import { useDesignerStore } from "@/stores/designer.store";
 
 // ============ Store ============
 const designerStore = useDesignerStore();
 
 // ============ 状态 ============
-const effectConfig = reactive<SpriteSheetPreviewConfig>({
+const characterConfig = reactive<SpriteSheetPreviewConfig>({
   url: "",
   rows: 5,
   cols: 5,
-  frameCount: 25,
+  frameCount: 22,
   scale: 1,
 });
 
-const previewConfig = ref<SpriteSheetPreviewConfig>({ ...effectConfig });
+const previewConfig = ref<SpriteSheetPreviewConfig>({ ...characterConfig });
 const playing = ref(false);
 const currentFrame = ref(0);
 const fps = ref(24);
-const effectName = ref("新特效");
-const blendMode = ref("normal");
+const characterName = ref("新角色");
 const status = ref("");
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
-const blendModes = [
-  { value: "normal", label: "正常" },
-  { value: "add", label: "叠加" },
-  { value: "multiply", label: "正片叠底" },
-  { value: "screen", label: "滤色" },
-];
-
-type CanvasPreviewInstance = InstanceType<typeof DesignerCanvasPreview>;
+type CanvasPreviewInstance = InstanceType<typeof CanvasPreview>;
 const canvasPreviewRef = ref<CanvasPreviewInstance | null>(null);
 
 // ============ 计算属性 ============
@@ -52,24 +44,24 @@ const previewTotalFrames = computed(() => {
 });
 
 const libraryItems = computed<LibraryItem[]>(() => {
-  return designerStore.effects.map((e) => ({
-    id: e.id,
-    name: e.name,
-    url: e.sprite.url,
-    rows: e.sprite.rows,
-    cols: e.sprite.cols,
-    frameCount: e.sprite.frameCount,
+  return designerStore.characters.map((c) => ({
+    id: c.id,
+    name: c.name,
+    url: c.sprite.url,
+    rows: c.sprite.rows,
+    cols: c.sprite.cols,
+    frameCount: c.sprite.frameCount,
   }));
 });
 
-const selectedLibraryId = computed(() => designerStore.currentEffectId);
+const selectedLibraryId = computed(() => designerStore.currentCharacterId);
 
 // 判断当前是否为本地上传的图片
-const isLocalImage = computed(() => effectConfig.url.startsWith("data:"));
+const isLocalImage = computed(() => characterConfig.url.startsWith("data:"));
 
 // ============ 方法 ============
 function refreshPreview(): void {
-  previewConfig.value = { ...effectConfig };
+  previewConfig.value = { ...characterConfig };
   currentFrame.value = 0;
   playing.value = false;
   canvasPreviewRef.value?.triggerRefresh();
@@ -81,75 +73,71 @@ function handleCanvasRefresh(): void {
 }
 
 function selectLibraryItem(item: LibraryItem): void {
-  designerStore.currentEffectId = item.id;
-  const effect = designerStore.getEffect(item.id);
-  if (effect) {
-    effectName.value = effect.name;
-    effectConfig.url = effect.sprite.url;
-    effectConfig.rows = effect.sprite.rows;
-    effectConfig.cols = effect.sprite.cols;
-    effectConfig.frameCount = effect.sprite.frameCount;
-    effectConfig.scale = effect.sprite.scale ?? 1;
-    blendMode.value = effect.blendMode ?? "normal";
+  designerStore.currentCharacterId = item.id;
+  const character = designerStore.getCharacter(item.id);
+  if (character) {
+    characterName.value = character.name;
+    characterConfig.url = character.sprite.url;
+    characterConfig.rows = character.sprite.rows;
+    characterConfig.cols = character.sprite.cols;
+    characterConfig.frameCount = character.sprite.frameCount;
+    characterConfig.scale = character.sprite.scale ?? 1;
     refreshPreview();
   }
 }
 
 function saveCurrentToLibrary(): void {
-  if (designerStore.currentEffectId) {
-    designerStore.updateEffect(designerStore.currentEffectId, {
-      name: effectName.value,
+  if (designerStore.currentCharacterId) {
+    designerStore.updateCharacter(designerStore.currentCharacterId, {
+      name: characterName.value,
       sprite: {
-        url: effectConfig.url,
-        rows: effectConfig.rows,
-        cols: effectConfig.cols,
-        frameCount: effectConfig.frameCount,
-        scale: effectConfig.scale,
+        url: characterConfig.url,
+        rows: characterConfig.rows,
+        cols: characterConfig.cols,
+        frameCount: characterConfig.frameCount,
+        scale: characterConfig.scale,
       },
-      blendMode: blendMode.value,
     });
     status.value = "已保存";
     setTimeout(() => (status.value = ""), 2000);
   } else {
-    const newId = designerStore.addEffect({
-      id: `effect_${Date.now()}`,
-      name: effectName.value,
+    const newId = designerStore.addCharacter({
+      id: `char_${Date.now()}`,
+      name: characterName.value,
       sprite: {
-        url: effectConfig.url,
-        rows: effectConfig.rows,
-        cols: effectConfig.cols,
-        frameCount: effectConfig.frameCount,
-        scale: effectConfig.scale,
+        url: characterConfig.url,
+        rows: characterConfig.rows,
+        cols: characterConfig.cols,
+        frameCount: characterConfig.frameCount,
+        scale: characterConfig.scale,
       },
       animations: [],
-      blendMode: blendMode.value,
     });
-    designerStore.currentEffectId = newId;
+    designerStore.currentCharacterId = newId;
     status.value = "已创建";
     setTimeout(() => (status.value = ""), 2000);
   }
 }
 
 function createNewConfig(): void {
-  designerStore.currentEffectId = null;
-  effectName.value = "新特效";
-  effectConfig.url = "";
-  effectConfig.rows = 5;
-  effectConfig.cols = 5;
-  effectConfig.frameCount = 25;
-  effectConfig.scale = 1;
-  blendMode.value = "normal";
+  designerStore.currentCharacterId = null;
+  characterName.value = "新角色";
+  characterConfig.url = "";
+  characterConfig.rows = 5;
+  characterConfig.cols = 5;
+  characterConfig.frameCount = 25;
+  characterConfig.scale = 1;
   refreshPreview();
 }
 
 function clearSelection(): void {
-  designerStore.currentEffectId = null;
+  designerStore.currentCharacterId = null;
   createNewConfig();
 }
 
 function deleteLibraryItem(id: string): void {
-  designerStore.removeEffect(id);
-  if (designerStore.currentEffectId === id) {
+  designerStore.removeCharacter(id);
+  if (designerStore.currentCharacterId === id) {
     createNewConfig();
   }
 }
@@ -173,10 +161,9 @@ function handleFileChange(event: Event): void {
   const reader = new FileReader();
   reader.onload = (e) => {
     const dataUrl = e.target?.result as string;
-    effectConfig.url = dataUrl;
+    characterConfig.url = dataUrl;
     status.value = "图片已加载";
     setTimeout(() => (status.value = ""), 2000);
-    // 上传图片后自动刷新预览
     refreshPreview();
   };
   reader.readAsDataURL(file);
@@ -191,10 +178,10 @@ const inputClass =
 <template>
   <DesignerTabLayout>
     <template #left>
-      <!-- 特效列表 -->
-      <DesignerLibraryPanel
-        title="特效列表"
-        description="选择现有特效配置，方便快速切换"
+      <!-- 人物列表 -->
+      <LibraryPanel
+        title="人物列表"
+        description="选择现有人物配置，方便快速切换"
         :items="libraryItems"
         :selected-id="selectedLibraryId"
         :status="status"
@@ -204,17 +191,22 @@ const inputClass =
         @delete="deleteLibraryItem"
       />
 
-      <!-- 特效属性 -->
+      <!-- 人物属性 -->
       <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-100 px-4 py-3">
-          <h3 class="font-semibold text-slate-800">特效属性</h3>
+          <h3 class="font-semibold text-slate-800">人物属性</h3>
         </div>
 
         <div class="space-y-4 p-4">
           <!-- 名称 -->
           <label class="block">
             <span class="mb-1.5 block text-xs font-medium text-slate-600">名称</span>
-            <input v-model="effectName" :class="inputClass" type="text" placeholder="输入特效名称" />
+            <input
+              v-model="characterName"
+              :class="inputClass"
+              type="text"
+              placeholder="输入角色名称"
+            />
           </label>
 
           <!-- 图片：URL 输入 + 上传按钮并排 -->
@@ -222,7 +214,7 @@ const inputClass =
             <span class="mb-1.5 block text-xs font-medium text-slate-600">图片</span>
             <div class="flex gap-2">
               <input
-                v-model="effectConfig.url"
+                v-model="characterConfig.url"
                 :class="[inputClass, 'flex-1']"
                 type="text"
                 placeholder="输入图片 URL 或上传本地图片"
@@ -238,18 +230,34 @@ const inputClass =
               </button>
             </div>
             <p v-if="isLocalImage" class="mt-1.5 text-xs text-emerald-600">✓ 已加载本地图片</p>
-            <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleFileChange" />
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="handleFileChange"
+            />
           </div>
 
           <!-- 行列设置 -->
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
               <span class="mb-1.5 block text-xs font-medium text-slate-600">行</span>
-              <input v-model.number="effectConfig.rows" :class="inputClass" min="1" type="number" />
+              <input
+                v-model.number="characterConfig.rows"
+                :class="inputClass"
+                min="1"
+                type="number"
+              />
             </label>
             <label class="block">
               <span class="mb-1.5 block text-xs font-medium text-slate-600">列</span>
-              <input v-model.number="effectConfig.cols" :class="inputClass" min="1" type="number" />
+              <input
+                v-model.number="characterConfig.cols"
+                :class="inputClass"
+                min="1"
+                type="number"
+              />
             </label>
           </div>
 
@@ -257,19 +265,22 @@ const inputClass =
           <label class="block">
             <span class="mb-1.5 block text-xs font-medium text-slate-600">帧数量</span>
             <input
-              v-model.number="effectConfig.frameCount"
+              v-model.number="characterConfig.frameCount"
               :class="inputClass"
               min="1"
               type="number"
-              :placeholder="`默认: ${effectConfig.rows * effectConfig.cols}`"
+              :placeholder="`默认: ${characterConfig.rows * characterConfig.cols}`"
             />
+            <span class="mt-1 block text-xs text-slate-400"
+              >用于指定实际使用的帧数，当图片未铺满时使用</span
+            >
           </label>
 
           <!-- 缩放比例 -->
           <label class="block">
             <span class="mb-1.5 block text-xs font-medium text-slate-600">缩放比例</span>
             <input
-              v-model.number="effectConfig.scale"
+              v-model.number="characterConfig.scale"
               :class="inputClass"
               min="0.1"
               max="10"
@@ -277,16 +288,9 @@ const inputClass =
               type="number"
               placeholder="默认: 1"
             />
-          </label>
-
-          <!-- 混合模式 -->
-          <label class="block">
-            <span class="mb-1.5 block text-xs font-medium text-slate-600">混合模式</span>
-            <select v-model="blendMode" :class="inputClass">
-              <option v-for="mode in blendModes" :key="mode.value" :value="mode.value">
-                {{ mode.label }}
-              </option>
-            </select>
+            <span class="mt-1 block text-xs text-slate-400"
+              >战斗场景中的显示缩放，建议 0.5 - 3.0</span
+            >
           </label>
 
           <!-- 刷新预览和保存按钮 -->
@@ -317,7 +321,7 @@ const inputClass =
       <div class="flex h-full w-full flex-1 flex-col overflow-hidden">
         <!-- 预览画布 -->
         <div class="w-full flex-1 overflow-hidden">
-          <DesignerCanvasPreview
+          <CanvasPreview
             ref="canvasPreviewRef"
             :config="previewConfig"
             :fps="fps"
@@ -332,7 +336,7 @@ const inputClass =
 
         <!-- 时间轴 -->
         <div class="h-40 w-full shrink-0">
-          <DesignerTimeline
+          <Timeline
             :total-frames="previewTotalFrames"
             :current-frame="currentFrame"
             :fps="fps"

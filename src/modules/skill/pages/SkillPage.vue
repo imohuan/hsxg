@@ -1,20 +1,20 @@
 <script setup lang="ts">
 /**
- * @file 技能编排标签页
+ * @file 技能编排页面
  * @description 整合战斗预览、时间轴编辑器和步骤面板
  */
 import { ref, computed, reactive, watch } from "vue";
 import { AddOutlined, DeleteOutlined, EditOutlined, SaveOutlined } from "@vicons/material";
 import { useDesignerStore } from "@/stores/designer.store";
 import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
-import SkillBattlePreview from "../components/SkillBattlePreview.vue";
-import SkillTimeline from "../components/SkillTimeline.vue";
-import SkillTimelineControls from "../components/SkillTimelineControls.vue";
-import SkillTabPanel from "../components/SkillTabPanel.vue";
+import SkillBattlePreview from "@/modules/skill/components/SkillBattlePreview.vue";
+import SkillTimeline from "@/modules/skill/components/SkillTimeline.vue";
+import SkillTimelineControls from "@/modules/skill/components/SkillTimelineControls.vue";
+import SkillTabPanel from "@/modules/skill/components/SkillTabPanel.vue";
 import type { SkillDesign, SkillStep, StepType, TimelineSegment } from "@/types";
-import type { LibraryDragPayload } from "../composables/useLibraryDragToTimeline";
-import { DEFAULT_ACTOR_ID, DEFAULT_TARGET_IDS } from "../core/sandboxConfig";
-import { useSplitPane } from "../composables/useSplitPane";
+import type { LibraryDragPayload } from "@/modules/skill/composables/useLibraryDragToTimeline";
+import { DEFAULT_ACTOR_ID, DEFAULT_TARGET_IDS } from "@/modules/skill/core/sandboxConfig";
+import { useSplitPane } from "@/modules/designer/composables/useSplitPane";
 
 // ============ Store ============
 
@@ -304,18 +304,17 @@ function handleToggleTarget(unitId: string): void {
 
 // ============ 分割面板 ============
 
-const {
-  containerRef: splitContainerRef,
-  topStyle: previewStyle,
-  bottomStyle: timelineStyle,
-  isDragging: isSplitDragging,
-  startDrag: startSplitDrag,
-} = useSplitPane({
+const splitPane = useSplitPane({
   storageKey: "skill-tab-split-percent",
   initialTopPercent: 45,
   minTopPercent: 25,
   maxTopPercent: 70,
 });
+
+const previewStyle = splitPane.topStyle;
+const timelineStyle = splitPane.bottomStyle;
+const isSplitDragging = splitPane.isDragging;
+const startSplitDrag = splitPane.startDrag;
 
 // ============ 监听 ============
 
@@ -446,7 +445,7 @@ watch(
     <template #right>
       <div
         v-if="currentSkill"
-        ref="splitContainerRef"
+        :ref="(el) => (splitPane.containerRef.value = el as HTMLElement)"
         class="flex h-full w-full flex-col overflow-hidden"
       >
         <!-- 预览画布 -->

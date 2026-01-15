@@ -5,7 +5,10 @@
  */
 import { computed } from "vue";
 import type { SkillStep, StepType } from "@/types";
-import { useLibraryDragToTimeline, type LibraryDragPayload } from "../composables/useLibraryDragToTimeline";
+import {
+  useLibraryDragToTimeline,
+  type LibraryDragPayload,
+} from "@/modules/skill/composables/useLibraryDragToTimeline";
 
 // ============ Props/Emits ============
 
@@ -33,14 +36,21 @@ const stepButtons: Array<{ label: string; type: StepType; description: string; i
 
 // ============ 拖拽 ============
 
-const { dragging: libraryDragging, onMouseDown: handleLibraryMouseDown } = useLibraryDragToTimeline((payload) => {
-  emit("drop-step-from-library", payload);
-});
+const { dragging: libraryDragging, onMouseDown: handleLibraryMouseDown } = useLibraryDragToTimeline(
+  (payload) => {
+    emit("drop-step-from-library", payload);
+  },
+);
 
 // ============ 计算属性 ============
 
 const stepTypeName = computed(() => {
-  const names: Record<string, string> = { move: "移动", damage: "伤害", effect: "特效", wait: "等待" };
+  const names: Record<string, string> = {
+    move: "移动",
+    damage: "伤害",
+    effect: "特效",
+    wait: "等待",
+  };
   return props.selectedStep ? names[props.selectedStep.type] || props.selectedStep.type : "";
 });
 </script>
@@ -125,7 +135,12 @@ const stepTypeName = computed(() => {
               class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="例如：targetX - 60"
               type="text"
-              @input="emit('update-step-param', { key: 'targetX', value: ($event.target as HTMLInputElement).value })"
+              @input="
+                emit('update-step-param', {
+                  key: 'targetX',
+                  value: ($event.target as HTMLInputElement).value,
+                })
+              "
             />
           </label>
           <label class="block">
@@ -135,7 +150,12 @@ const stepTypeName = computed(() => {
               class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="例如：targetY"
               type="text"
-              @input="emit('update-step-param', { key: 'targetY', value: ($event.target as HTMLInputElement).value })"
+              @input="
+                emit('update-step-param', {
+                  key: 'targetY',
+                  value: ($event.target as HTMLInputElement).value,
+                })
+              "
             />
           </label>
           <label class="block">
@@ -198,7 +218,12 @@ const stepTypeName = computed(() => {
               class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="特效资源 ID"
               type="text"
-              @input="emit('update-step-param', { key: 'effectId', value: ($event.target as HTMLInputElement).value })"
+              @input="
+                emit('update-step-param', {
+                  key: 'effectId',
+                  value: ($event.target as HTMLInputElement).value,
+                })
+              "
             />
           </label>
           <label class="block">
@@ -208,7 +233,12 @@ const stepTypeName = computed(() => {
               class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="例如：targetX"
               type="text"
-              @input="emit('update-step-param', { key: 'x', value: ($event.target as HTMLInputElement).value })"
+              @input="
+                emit('update-step-param', {
+                  key: 'x',
+                  value: ($event.target as HTMLInputElement).value,
+                })
+              "
             />
           </label>
           <label class="block">
@@ -218,7 +248,12 @@ const stepTypeName = computed(() => {
               class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 transition-all outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               placeholder="例如：targetY"
               type="text"
-              @input="emit('update-step-param', { key: 'y', value: ($event.target as HTMLInputElement).value })"
+              @input="
+                emit('update-step-param', {
+                  key: 'y',
+                  value: ($event.target as HTMLInputElement).value,
+                })
+              "
             />
           </label>
           <label class="block">

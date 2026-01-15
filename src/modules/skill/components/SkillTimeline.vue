@@ -7,7 +7,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useStorage } from "@vueuse/core";
 import type { SkillStep } from "@/types";
-import { libraryDraggingRef } from "../composables/useLibraryDragToTimeline";
+import { libraryDraggingRef } from "@/modules/skill/composables/useLibraryDragToTimeline";
 
 // ============ 类型定义 ============
 

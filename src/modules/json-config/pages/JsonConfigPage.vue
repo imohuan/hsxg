@@ -1,10 +1,9 @@
 <script setup lang="ts">
 /**
- * @file JSON 配置标签页
+ * @file JSON 配置页面
  * @description 整合 JSON 配置面板，提供配置数据的导入导出和编辑功能
- * Requirements: 6.1-6.5
  */
-import JsonPanel from "../components/JsonPanel.vue";
+import JsonPanel from "@/modules/json-config/components/JsonPanel.vue";
 </script>
 
 <template>

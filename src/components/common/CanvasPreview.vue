@@ -14,7 +14,10 @@ import {
   AutoAwesomeOutlined,
 } from "@vicons/material";
 import CanvasContainer from "@/components/common/CanvasContainer.vue";
-import { PreviewPlayer, type SpriteSheetPreviewConfig } from "../core/PreviewPlayer";
+import {
+  PreviewPlayer,
+  type SpriteSheetPreviewConfig,
+} from "@/modules/designer/core/PreviewPlayer";
 
 const props = defineProps<{
   config: SpriteSheetPreviewConfig;
@@ -210,7 +213,12 @@ defineExpose({ triggerRefresh: triggerManualRefresh });
 
 <template>
   <div class="h-full w-full">
-    <CanvasContainer ref="canvasContainerRef" :min-scale="0.1" :max-scale="8" @scale-change="handleScaleChange">
+    <CanvasContainer
+      ref="canvasContainerRef"
+      :min-scale="0.1"
+      :max-scale="8"
+      @scale-change="handleScaleChange"
+    >
       <template #background>
         <div class="checkerboard-bg h-full w-full" />
       </template>
@@ -220,7 +228,11 @@ defineExpose({ triggerRefresh: triggerManualRefresh });
         ref="containerRef"
         class="relative"
         :class="previewMode === 'image' ? 'image-container' : 'h-full w-full'"
-        :style="previewMode === 'image' ? { width: `${imageDisplayWidth}px`, height: `${imageDisplayHeight}px` } : {}"
+        :style="
+          previewMode === 'image'
+            ? { width: `${imageDisplayWidth}px`, height: `${imageDisplayHeight}px` }
+            : {}
+        "
       >
         <!-- Canvas - 效果模式显示 -->
         <canvas v-show="previewMode === 'effect'" ref="canvasRef" class="block" />
@@ -260,7 +272,10 @@ defineExpose({ triggerRefresh: triggerManualRefresh });
             type="button"
             @click="togglePreviewMode"
           >
-            <component :is="previewMode === 'image' ? AutoAwesomeOutlined : ImageOutlined" class="size-4" />
+            <component
+              :is="previewMode === 'image' ? AutoAwesomeOutlined : ImageOutlined"
+              class="size-4"
+            />
             <span>{{ previewMode === "image" ? "显示效果" : "显示图片" }}</span>
           </button>
         </div>

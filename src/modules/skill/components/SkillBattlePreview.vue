@@ -10,7 +10,7 @@ import {
   getSandboxUnitById,
   calculateStaggeredPositions,
   type SkillSandboxUnit,
-} from "../core/sandboxConfig";
+} from "@/modules/skill/core/sandboxConfig";
 
 // ============ Props/Emits ============
 
@@ -81,14 +81,19 @@ const unitPositions = computed(() => {
 const activeSegment = computed(() => {
   return (
     props.segments.find(
-      (segment) => props.currentFrame >= segment.startFrame && props.currentFrame < segment.endFrame,
+      (segment) =>
+        props.currentFrame >= segment.startFrame && props.currentFrame < segment.endFrame,
     ) ?? null
   );
 });
 
 // 施法者单位
 const actorUnit = computed(() => {
-  return getSandboxUnitById(props.casterId) ?? SKILL_SANDBOX_UNITS.find((unit) => unit.side === "player") ?? null;
+  return (
+    getSandboxUnitById(props.casterId) ??
+    SKILL_SANDBOX_UNITS.find((unit) => unit.side === "player") ??
+    null
+  );
 });
 
 // 预览目标
@@ -220,7 +225,14 @@ const drawUnit = (unit: SkillSandboxUnit, highlight: "actor" | "target" | null) 
   ctx.value.fillStyle = unit.side === "player" ? "rgba(99,102,241,0.7)" : "rgba(244,63,94,0.7)";
   ctx.value.strokeStyle = "#1e293b";
   ctx.value.lineWidth = 2;
-  drawRoundedRect(ctx.value, x - bodyWidth / 2, y - bodyHeight / 2, bodyWidth, bodyHeight, 12 * camera.value.scale);
+  drawRoundedRect(
+    ctx.value,
+    x - bodyWidth / 2,
+    y - bodyHeight / 2,
+    bodyWidth,
+    bodyHeight,
+    12 * camera.value.scale,
+  );
   ctx.value.fill();
   ctx.value.stroke();
 
@@ -247,7 +259,12 @@ const drawUnit = (unit: SkillSandboxUnit, highlight: "actor" | "target" | null) 
   ctx.value.fillStyle = "rgba(226,232,240,0.9)";
   const barWidth = bodyWidth;
   const barHeight = 8 * camera.value.scale;
-  ctx.value.fillRect(x - barWidth / 2, y + bodyHeight / 2 + 6 * camera.value.scale, barWidth, barHeight);
+  ctx.value.fillRect(
+    x - barWidth / 2,
+    y + bodyHeight / 2 + 6 * camera.value.scale,
+    barWidth,
+    barHeight,
+  );
   ctx.value.fillStyle = hpPercent > 0.4 ? "#10b981" : "#f43f5e";
   ctx.value.fillRect(
     x - barWidth / 2,
@@ -269,10 +286,16 @@ const drawActiveEffect = () => {
     targets.length > 0
       ? targets
           .map((unit) => project(unit))
-          .reduce((acc, pos) => ({ x: acc.x + pos.x / targets.length, y: acc.y + pos.y / targets.length }), {
-            x: 0,
-            y: 0,
-          })
+          .reduce(
+            (acc, pos) => ({
+              x: acc.x + pos.x / targets.length,
+              y: acc.y + pos.y / targets.length,
+            }),
+            {
+              x: 0,
+              y: 0,
+            },
+          )
       : actorPos;
 
   const stepType = segment.step?.type;
@@ -467,7 +490,11 @@ watch(
     caster: props.casterId,
     targets: props.selectedTargetIds.slice(),
     modes: props.targetingModes.slice(),
-    segments: props.segments.map((s) => ({ start: s.startFrame, end: s.endFrame, type: s.step?.type })),
+    segments: props.segments.map((s) => ({
+      start: s.startFrame,
+      end: s.endFrame,
+      type: s.step?.type,
+    })),
   }),
   () => draw(),
   { deep: true },
@@ -480,7 +507,11 @@ watch(
     class="relative flex h-full w-full overflow-hidden rounded-t-xl border-b border-slate-200 bg-slate-100"
     @wheel="handleWheel"
   >
-    <canvas ref="canvasRef" class="h-full w-full cursor-grab active:cursor-grabbing" @pointerdown="handlePointerDown" />
+    <canvas
+      ref="canvasRef"
+      class="h-full w-full cursor-grab active:cursor-grabbing"
+      @pointerdown="handlePointerDown"
+    />
     <!-- 控制按钮 -->
     <div
       class="absolute top-4 left-4 flex flex-wrap gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur"
