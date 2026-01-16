@@ -623,10 +623,9 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
 
     ctx.save();
 
-    // 应用相机变换
-    ctx.translate(currentWidth / 2 + cameraState.offsetX, currentHeight / 2 + cameraState.offsetY);
+    // 应用相机变换（先平移后缩放，支持以鼠标位置为中心缩放）
+    ctx.translate(cameraState.offsetX, cameraState.offsetY);
     ctx.scale(cameraState.scale, cameraState.scale);
-    ctx.translate(-currentWidth / 2, -currentHeight / 2);
 
     // 绘制背景
     drawBackground();

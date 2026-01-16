@@ -288,6 +288,7 @@ export function useCameraController(config: CameraControllerConfig) {
     const canvasCenterX = currentWidth / 2;
     const canvasCenterY = currentHeight / 2;
 
+    // 计算目标偏移量，使指定位置显示在画布中心
     const targetOffsetX = canvasCenterX - x * cameraState.value.scale;
     const targetOffsetY = canvasCenterY - y * cameraState.value.scale;
 
