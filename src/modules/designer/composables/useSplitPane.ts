@@ -17,17 +17,10 @@ export interface UseSplitPaneOptions {
 }
 
 export function useSplitPane(options: UseSplitPaneOptions = {}) {
-  const {
-    storageKey,
-    initialTopPercent = 50,
-    minTopPercent = 20,
-    maxTopPercent = 80,
-  } = options;
+  const { storageKey, initialTopPercent = 50, minTopPercent = 20, maxTopPercent = 80 } = options;
 
   // 使用 localStorage 持久化（如果提供了 storageKey）
-  const topPercent = storageKey
-    ? useStorage(storageKey, initialTopPercent)
-    : ref(initialTopPercent);
+  const topPercent = storageKey ? useStorage(storageKey, initialTopPercent) : ref(initialTopPercent);
 
   // 容器引用
   const containerRef = ref<HTMLElement | null>(null);

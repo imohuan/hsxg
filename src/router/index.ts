@@ -39,7 +39,7 @@ const routes: RouteRecordRaw[] = [
             path: "json",
             name: "DesignerJson",
             component: () => import("@/modules/json-config/pages/JsonConfigPage.vue"),
-          }
+          },
         ],
       },
     ],

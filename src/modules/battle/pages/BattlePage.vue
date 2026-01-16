@@ -1,51 +1,104 @@
 <script setup lang="ts">
 /**
  * @file 战斗页面
- * @description 整合画布、菜单、HUD 组件
- * 现代 SaaS 风格：亮色主题
+ * @description 全屏画布战斗页面，使用 GameCanvas 进行渲染
+ * 使用新版 slot 接口：header、overlay、unit-info
  */
-import { ref, computed, watch } from "vue";
-import BattleCanvas from "../components/BattleCanvas.vue";
-import BattleMenu from "../components/BattleMenu.vue";
-import { useBattle } from "../composables/useBattle";
-import type { BattleScene } from "../core/BattleScene";
-import type { Unit } from "../core/Unit";
-import type { BattleConfig, ActionType, UnitConfig } from "@/types";
-
-// ============ 战斗控制 ============
-
-const battle = useBattle({
-  commandTimeLimit: 60,
-});
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import GameCanvas from "@/components/gamecanvas/GameCanvas.vue";
+import BattleHeader from "../components/BattleHeader.vue";
+import DiamondMenu from "../components/DiamondMenu.vue";
+import UnitInfoPopup from "../components/UnitInfoPopup.vue";
+import type { ActionType, UnitConfig, GameData, BattleUnit, BattlePhase, Point } from "@/types";
 
 // ============ 状态 ============
 
 const showResultModal = ref(false);
+const containerRef = ref<HTMLDivElement | null>(null);
+const canvasWidth = ref(960);
+const canvasHeight = ref(540);
+
+// 战斗状态
+const phase = ref<BattlePhase>("init");
+const turn = ref(1);
+const timer = ref(60);
+const result = ref<"win" | "lose" | "escape" | null>(null);
+
+// 单位数据
+const playerUnits = ref<UnitConfig[]>([]);
+const enemyUnits = ref<UnitConfig[]>([]);
+const currentActorIndex = ref(0);
+
+// 悬停单位（用于 unit-info slot）
+const hoveredUnit = ref<BattleUnit | null>(null);
+
+// 倒计时定时器
+let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+// ============ 画布配置 ============
+
+/** 将 UnitConfig 转换为 BattleUnit */
+function toBattleUnit(config: UnitConfig, isPlayer: boolean): BattleUnit {
+  return {
+    id: config.id,
+    name: config.name,
+    isPlayer,
+    hp: config.stats.hp,
+    maxHp: config.stats.maxHp,
+    mp: config.stats.mp,
+    maxMp: config.stats.maxMp,
+    speed: config.stats.speed,
+    isDead: config.stats.hp <= 0,
+    selectable: true,
+    sprite: config.spriteConfig,
+  };
+}
+
+/** 新版 GameData 配置 */
+const gameData = computed<GameData>(() => {
+  const players = playerUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, true));
+  const enemies = enemyUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, false));
+  const currentActor = playerUnits.value[currentActorIndex.value];
+
+  return {
+    scene: {
+      name: "战斗",
+      backgroundColor: "#f9fafb",
+    },
+    players: {
+      enemy: { id: "enemy", name: "敌方" },
+      self: { id: "player", name: "我方" },
+    },
+    units: [...enemies, ...players],
+    effects: [],
+    sounds: [],
+    skills: [],
+    items: [],
+    turn: {
+      number: turn.value,
+      activeUnitId: currentActor?.id,
+      phase:
+        phase.value === "command" ? "command" : phase.value === "execute" ? "execute" : "result",
+    },
+  };
+});
 
 // ============ 计算属性 ============
 
-const currentActorConfig = computed<UnitConfig | undefined>(() => {
-  return battle.currentActor.value?.config;
-});
-
-const targetConfigs = computed<UnitConfig[]>(() => {
-  return battle.aliveEnemyUnits.value.map((unit) => unit.config);
-});
-
 const timerDisplay = computed(() => {
-  const minutes = Math.floor(battle.timer.value / 60);
-  const seconds = battle.timer.value % 60;
+  const minutes = Math.floor(timer.value / 60);
+  const seconds = timer.value % 60;
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 });
 
 const timerColor = computed(() => {
-  if (battle.timer.value <= 10) return "text-red-500";
-  if (battle.timer.value <= 30) return "text-amber-500";
-  return "text-slate-700";
+  if (timer.value <= 10) return "text-red-600";
+  if (timer.value <= 30) return "text-amber-600";
+  return "text-gray-800";
 });
 
 const resultText = computed(() => {
-  switch (battle.result.value) {
+  switch (result.value) {
     case "win":
       return "战斗胜利！";
     case "lose":
@@ -58,64 +111,79 @@ const resultText = computed(() => {
 });
 
 const resultColor = computed(() => {
-  switch (battle.result.value) {
+  switch (result.value) {
     case "win":
-      return "text-emerald-500";
+      return "text-emerald-600";
     case "lose":
-      return "text-red-500";
+      return "text-red-600";
     case "escape":
-      return "text-amber-500";
+      return "text-amber-600";
     default:
-      return "text-slate-700";
+      return "text-gray-800";
   }
 });
 
-// ============ 示例数据 ============
-
-const sampleSkills = [
-  { id: "fireball", name: "火球术", mpCost: 10, description: "发射一颗火球" },
-  { id: "heal", name: "治疗术", mpCost: 15, description: "恢复生命值" },
-  { id: "thunder", name: "雷击", mpCost: 20, description: "召唤雷电攻击" },
-];
-
-const sampleItems = [
-  { id: "potion", name: "生命药水", count: 3, description: "恢复 50 HP" },
-  { id: "ether", name: "魔法药水", count: 2, description: "恢复 30 MP" },
-];
-
-const sampleSummons = [{ id: "wolf", name: "召唤狼", description: "召唤一只战狼" }];
+const actionQueueProgress = computed(() => 0);
 
 // ============ 方法 ============
 
-function handleSceneReady(scene: BattleScene): void {
-  battle.setScene(scene);
+/** 更新画布尺寸以填满容器 */
+function updateCanvasSize(): void {
+  if (containerRef.value) {
+    canvasWidth.value = containerRef.value.clientWidth;
+    canvasHeight.value = containerRef.value.clientHeight;
+  }
 }
 
-function handleUnitClick(unit: Unit): void {
-  console.log("[BattlePage] 单位被点击:", unit.config.name);
+function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
+  console.log("[BattlePage] 单位被点击:", payload.unit.name, payload.position);
 }
 
-function handleAction(type: ActionType, targetId?: string, skillId?: string, itemId?: string): void {
-  battle.submitAction(type, targetId, skillId, itemId);
+function handleUnitHover(payload: { unit: BattleUnit | null }): void {
+  hoveredUnit.value = payload.unit;
 }
 
-function handleCancel(): void {
-  console.log("[BattlePage] 取消操作");
+function handleMenuSelect(key: string): void {
+  console.log("[BattlePage] 菜单选择:", key);
+  switch (key) {
+    case "attack":
+      break;
+    case "skill":
+      break;
+    case "item":
+      break;
+    case "defend":
+      handleAction("defend");
+      break;
+    case "escape":
+      handleAction("escape");
+      break;
+    default:
+      break;
+  }
 }
 
-async function startDemoBattle(): Promise<void> {
-  const demoConfig: BattleConfig = {
-    playerUnits: [
-      createDemoUnit("player1", "勇者", true, 0, 0),
-      createDemoUnit("player2", "法师", true, 1, 0),
-      createDemoUnit("player3", "牧师", true, 2, 0),
-    ],
-    enemyUnits: [createDemoUnit("enemy1", "哥布林", false, 0, 0), createDemoUnit("enemy2", "史莱姆", false, 1, 0)],
-  };
-  await battle.startBattle(demoConfig);
+function handleAction(
+  type: ActionType,
+  _targetId?: string,
+  _skillId?: string,
+  _itemId?: string,
+): void {
+  console.log("[BattlePage] 执行行动:", type);
+  if (currentActorIndex.value < playerUnits.value.length - 1) {
+    currentActorIndex.value++;
+  } else {
+    startExecutePhase();
+  }
 }
 
-function createDemoUnit(id: string, name: string, isPlayer: boolean, row: number, col: number): UnitConfig {
+function createDemoUnit(
+  id: string,
+  name: string,
+  isPlayer: boolean,
+  row: number,
+  col: number,
+): UnitConfig {
   return {
     id,
     name,
@@ -136,162 +204,217 @@ function createDemoUnit(id: string, name: string, isPlayer: boolean, row: number
   };
 }
 
+async function startDemoBattle(): Promise<void> {
+  playerUnits.value = [
+    createDemoUnit("player1", "勇者", true, 0, 0),
+    createDemoUnit("player2", "法师", true, 1, 0),
+    createDemoUnit("player3", "牧师", true, 2, 0),
+  ];
+  enemyUnits.value = [
+    createDemoUnit("enemy1", "哥布林", false, 0, 0),
+    createDemoUnit("enemy2", "史莱姆", false, 1, 0),
+  ];
+
+  phase.value = "command";
+  turn.value = 1;
+  currentActorIndex.value = 0;
+  result.value = null;
+  timer.value = 60;
+  startTimer();
+}
+
+function startTimer(): void {
+  stopTimer();
+  timerInterval = setInterval(() => {
+    timer.value--;
+    if (timer.value <= 0) {
+      handleTimeOut();
+    }
+  }, 1000);
+}
+
+function stopTimer(): void {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function handleTimeOut(): void {
+  stopTimer();
+  startExecutePhase();
+}
+
+async function startExecutePhase(): Promise<void> {
+  stopTimer();
+  phase.value = "execute";
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  const random = Math.random();
+  if (random < 0.3) {
+    endBattle("win");
+  } else if (random < 0.1) {
+    endBattle("lose");
+  } else {
+    nextTurn();
+  }
+}
+
+function nextTurn(): void {
+  turn.value++;
+  phase.value = "command";
+  currentActorIndex.value = 0;
+  timer.value = 60;
+  startTimer();
+}
+
+function endBattle(battleResult: "win" | "lose" | "escape"): void {
+  stopTimer();
+  phase.value = "result";
+  result.value = battleResult;
+  setTimeout(() => {
+    showResultModal.value = true;
+  }, 1000);
+}
+
 function restartBattle(): void {
   showResultModal.value = false;
-  battle.resetBattle();
+  resetBattle();
   startDemoBattle();
+}
+
+function resetBattle(): void {
+  stopTimer();
+  phase.value = "init";
+  turn.value = 1;
+  timer.value = 60;
+  currentActorIndex.value = 0;
+  result.value = null;
+  playerUnits.value = [];
+  enemyUnits.value = [];
 }
 
 function goToMenu(): void {
   showResultModal.value = false;
-  battle.resetBattle();
+  resetBattle();
 }
 
 // ============ 生命周期 ============
 
-watch(
-  () => battle.result.value,
-  (newResult) => {
-    if (newResult) {
-      setTimeout(() => {
-        showResultModal.value = true;
-      }, 1500);
-    }
-  },
-);
+onMounted(() => {
+  updateCanvasSize();
+  window.addEventListener("resize", updateCanvasSize);
+});
+
+onUnmounted(() => {
+  stopTimer();
+  window.removeEventListener("resize", updateCanvasSize);
+});
+
+watch(result, (newResult) => {
+  if (newResult) {
+    setTimeout(() => {
+      showResultModal.value = true;
+    }, 1500);
+  }
+});
 </script>
 
 <template>
-  <div class="flex h-full flex-col bg-slate-100">
-    <!-- 顶部状态栏 -->
-    <div class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 shadow-sm">
-      <div class="flex items-center gap-4">
-        <span class="rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700">
-          回合 {{ battle.turn.value }}
-        </span>
-        <span class="text-sm text-slate-500">
-          {{ battle.phase.value === "command" ? "操作阶段" : battle.phase.value === "execute" ? "执行阶段" : "准备中" }}
-        </span>
-      </div>
+  <!-- 全屏画布容器 -->
+  <div ref="containerRef" class="relative h-full w-full overflow-hidden bg-gray-50">
+    <!-- 战斗画布 - 使用 GameCanvas -->
+    <GameCanvas
+      ref="canvasRef"
+      :game-data="gameData"
+      :enable-transform="false"
+      :width="canvasWidth"
+      :height="canvasHeight"
+      class="absolute inset-0"
+      @unit:click="handleUnitClick"
+      @unit:hover="handleUnitHover"
+    >
+      <!-- header slot：顶部信息栏 -->
+      <template #header="{ scene, players, turn: turnInfo }">
+        <BattleHeader :scene="scene" :players="players" :turn="turnInfo" />
+      </template>
 
-      <!-- 倒计时 -->
-      <div v-if="battle.phase.value === 'command'" class="flex items-center gap-2">
-        <span class="text-sm text-slate-500">剩余时间:</span>
-        <span class="text-xl font-bold tabular-nums" :class="timerColor">
+      <!-- overlay slot：菱形菜单（指令阶段显示） -->
+      <template #overlay="{ canvasSize }">
+        <div
+          v-if="phase === 'command'"
+          class="absolute z-20"
+          :style="{
+            left: `${canvasSize.width / 2}px`,
+            top: `${canvasSize.height / 2}px`,
+            transform: 'translate(-50%, -50%)',
+          }"
+        >
+          <DiamondMenu @select="handleMenuSelect" />
+        </div>
+      </template>
+
+      <!-- unit-info slot：单位信息悬浮框 -->
+      <template #unit-info="{ unit, position }">
+        <UnitInfoPopup :unit="unit" :position="position" />
+      </template>
+    </GameCanvas>
+
+    <!-- 左上角：倒计时（操作阶段显示） -->
+    <div
+      v-if="phase === 'command'"
+      class="absolute top-14 left-4 z-20 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm"
+    >
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-600">剩余时间</span>
+        <span class="text-2xl font-bold tabular-nums" :class="timerColor">
           {{ timerDisplay }}
         </span>
       </div>
+    </div>
 
-      <!-- 执行进度 -->
-      <div v-if="battle.phase.value === 'execute'" class="flex items-center gap-3">
-        <span class="text-sm text-slate-500">执行进度:</span>
-        <div class="h-2 w-32 overflow-hidden rounded-full bg-slate-200">
+    <!-- 右上角：执行进度（执行阶段显示） -->
+    <div
+      v-if="phase === 'execute'"
+      class="absolute top-14 right-4 z-20 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="size-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"
+        />
+        <span class="text-sm text-gray-600">执行中...</span>
+        <div class="h-2 w-24 overflow-hidden rounded-full bg-gray-200">
           <div
             class="h-full bg-indigo-500 transition-all duration-300"
-            :style="{ width: `${battle.actionQueueProgress.value * 100}%` }"
+            :style="{ width: `${actionQueueProgress * 100}%` }"
           />
         </div>
       </div>
     </div>
 
-    <!-- 主内容区 -->
-    <div class="flex flex-1 overflow-hidden">
-      <!-- 战斗画布 -->
-      <div class="flex flex-1 items-center justify-center p-6">
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-          <BattleCanvas :width="800" :height="450" @ready="handleSceneReady" @unit-click="handleUnitClick" />
-        </div>
-      </div>
-
-      <!-- 右侧面板 -->
-      <div class="flex w-80 flex-col gap-4 border-l border-slate-200 bg-white p-4">
-        <!-- 当前角色信息 -->
-        <div
-          v-if="currentActorConfig && battle.phase.value === 'command'"
-          class="rounded-xl border border-slate-200 bg-slate-50 p-4"
+    <!-- 中央：开始战斗按钮（初始状态显示） -->
+    <div v-if="phase === 'init'" class="absolute inset-0 z-30 flex items-center justify-center">
+      <div class="flex flex-col items-center gap-4">
+        <button
+          class="rounded-xl bg-indigo-500 px-8 py-4 text-xl font-bold text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-105 hover:bg-indigo-600 hover:shadow-xl"
+          @click="startDemoBattle"
         >
-          <h4 class="mb-3 font-semibold text-slate-800">{{ currentActorConfig.name }}</h4>
-          <div class="flex gap-4 text-sm">
-            <div class="flex items-center gap-2">
-              <span class="text-red-500">HP:</span>
-              <div class="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  class="h-full bg-red-500"
-                  :style="{ width: `${(currentActorConfig.stats.hp / currentActorConfig.stats.maxHp) * 100}%` }"
-                />
-              </div>
-              <span class="text-slate-600">{{ currentActorConfig.stats.hp }}/{{ currentActorConfig.stats.maxHp }}</span>
-            </div>
-          </div>
-          <div class="mt-2 flex gap-4 text-sm">
-            <div class="flex items-center gap-2">
-              <span class="text-blue-500">MP:</span>
-              <div class="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  class="h-full bg-blue-500"
-                  :style="{ width: `${(currentActorConfig.stats.mp / currentActorConfig.stats.maxMp) * 100}%` }"
-                />
-              </div>
-              <span class="text-slate-600">{{ currentActorConfig.stats.mp }}/{{ currentActorConfig.stats.maxMp }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 操作菜单 -->
-        <BattleMenu
-          v-if="battle.phase.value === 'command'"
-          :current-actor="currentActorConfig"
-          :targets="targetConfigs"
-          :skills="sampleSkills"
-          :items="sampleItems"
-          :summons="sampleSummons"
-          :team-size="battle.teamSize.value"
-          :disabled="battle.phase.value !== 'command'"
-          @action="handleAction"
-          @cancel="handleCancel"
-        />
-
-        <!-- 执行阶段提示 -->
-        <div
-          v-if="battle.phase.value === 'execute'"
-          class="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-8"
-        >
-          <div class="mb-3 size-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-          <span class="text-slate-600">执行中...</span>
-        </div>
-
-        <!-- 初始状态 -->
-        <div
-          v-if="battle.phase.value === 'init'"
-          class="flex flex-col items-center justify-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-8"
-        >
-          <p class="text-center text-slate-500">点击下方按钮开始战斗</p>
-          <button
-            class="rounded-lg bg-indigo-500 px-6 py-2.5 font-semibold text-white shadow-md shadow-indigo-500/25 transition-all hover:bg-indigo-600 hover:shadow-lg"
-            @click="startDemoBattle"
-          >
-            开始战斗
-          </button>
-        </div>
-
-        <!-- 行动队列预览 -->
-        <div v-if="battle.actionQueueLength.value > 0" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h4 class="mb-2 text-sm font-semibold text-slate-500">行动队列</h4>
-          <div class="text-sm text-slate-700">剩余行动: {{ battle.actionQueueLength.value }}</div>
-        </div>
+          开始战斗
+        </button>
+        <p class="text-sm text-gray-400">点击开始演示战斗</p>
       </div>
     </div>
 
     <!-- 战斗结果弹窗 -->
     <div
       v-if="showResultModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      class="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
     >
-      <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-2xl">
+      <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-2xl">
         <h2 class="mb-4 text-3xl font-bold" :class="resultColor">
           {{ resultText }}
         </h2>
-        <p class="mb-6 text-slate-500">战斗持续 {{ battle.turn.value }} 回合</p>
+        <p class="mb-6 text-gray-600">战斗持续 {{ turn }} 回合</p>
         <div class="flex justify-center gap-4">
           <button
             class="rounded-lg bg-indigo-500 px-6 py-2.5 font-semibold text-white shadow-md transition-all hover:bg-indigo-600"
@@ -300,7 +423,7 @@ watch(
             再来一局
           </button>
           <button
-            class="rounded-lg border border-slate-300 bg-white px-6 py-2.5 font-semibold text-slate-700 transition-all hover:bg-slate-50"
+            class="rounded-lg border border-gray-300 bg-gray-50 px-6 py-2.5 font-semibold text-gray-700 transition-all hover:bg-gray-100"
             @click="goToMenu"
           >
             返回

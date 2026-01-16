@@ -2,15 +2,22 @@
 /**
  * @file 特效编辑页面
  * @description 整合雪碧图编辑器、特效面板和动画预览组件（现代 SaaS 风格）
+ * 使用 GameCanvas 进行特效预览
  */
 import { ref, computed, reactive } from "vue";
-import { RefreshOutlined, UploadFileOutlined, SaveOutlined } from "@vicons/material";
+import {
+  RefreshOutlined,
+  UploadFileOutlined,
+  SaveOutlined,
+  PlayArrowOutlined,
+} from "@vicons/material";
 import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
 import LibraryPanel from "@/components/common/LibraryPanel.vue";
-import CanvasPreview from "@/components/common/CanvasPreview.vue";
+import GameCanvas from "@/components/gamecanvas/GameCanvas.vue";
 import Timeline from "@/components/common/Timeline.vue";
 import type { LibraryItem } from "@/components/common/LibraryPanel.vue";
 import type { SpriteSheetPreviewConfig } from "@/modules/designer/core/PreviewPlayer";
+import type { GameData, EffectConfig } from "@/types";
 import { useDesignerStore } from "@/stores/designer.store";
 
 // ============ Store ============
@@ -25,7 +32,6 @@ const effectConfig = reactive<SpriteSheetPreviewConfig>({
   scale: 1,
 });
 
-const previewConfig = ref<SpriteSheetPreviewConfig>({ ...effectConfig });
 const playing = ref(false);
 const currentFrame = ref(0);
 const fps = ref(24);
@@ -42,13 +48,13 @@ const blendModes = [
   { value: "screen", label: "滤色" },
 ];
 
-type CanvasPreviewInstance = InstanceType<typeof CanvasPreview>;
-const canvasPreviewRef = ref<CanvasPreviewInstance | null>(null);
+// GameCanvas 引用
+type GameCanvasInstance = InstanceType<typeof GameCanvas>;
+const canvasRef = ref<GameCanvasInstance | null>(null);
 
 // ============ 计算属性 ============
 const previewTotalFrames = computed(() => {
-  const config = previewConfig.value;
-  return config.frameCount || config.rows * config.cols;
+  return effectConfig.frameCount || effectConfig.rows * effectConfig.cols;
 });
 
 const libraryItems = computed<LibraryItem[]>(() => {
@@ -67,17 +73,54 @@ const selectedLibraryId = computed(() => designerStore.currentEffectId);
 // 判断当前是否为本地上传的图片
 const isLocalImage = computed(() => effectConfig.url.startsWith("data:"));
 
+// 构建 GameData 用于 GameCanvas
+const gameData = computed<GameData>(() => {
+  // 将当前编辑的特效配置转换为 EffectConfig
+  const currentEffect: EffectConfig = {
+    id: "preview_effect",
+    name: effectName.value,
+    sprite: {
+      url: effectConfig.url,
+      rows: effectConfig.rows,
+      cols: effectConfig.cols,
+      frameCount: effectConfig.frameCount,
+      scale: effectConfig.scale,
+      fps: fps.value,
+    },
+    animations: [],
+    blendMode: blendMode.value,
+  };
+
+  // 合并 store 中的特效和当前预览特效
+  const allEffects = [...designerStore.effects];
+  // 如果当前特效有 URL，添加到列表中
+  if (effectConfig.url) {
+    allEffects.push(currentEffect);
+  }
+
+  return {
+    scene: {
+      name: "特效预览",
+      backgroundColor: "#f9fafb",
+    },
+    players: {
+      enemy: { id: "", name: "" },
+      self: { id: "", name: "" },
+    },
+    units: [],
+    effects: allEffects,
+    sounds: [],
+    skills: [],
+    items: [],
+  };
+});
+
 // ============ 方法 ============
 function refreshPreview(): void {
-  previewConfig.value = { ...effectConfig };
   currentFrame.value = 0;
   playing.value = false;
-  canvasPreviewRef.value?.triggerRefresh();
-}
-
-function handleCanvasRefresh(): void {
-  currentFrame.value = 0;
-  playing.value = false;
+  // 停止所有特效
+  canvasRef.value?.stopAllEffects();
 }
 
 function selectLibraryItem(item: LibraryItem): void {
@@ -180,6 +223,31 @@ function handleFileChange(event: Event): void {
   };
   reader.readAsDataURL(file);
   input.value = "";
+}
+
+// 播放当前特效
+async function playCurrentEffect(): Promise<void> {
+  if (!effectConfig.url || !canvasRef.value) return;
+
+  // 获取画布尺寸，在中心播放特效
+  const size = canvasRef.value.getCanvasSize();
+  const centerX = size.width / 2;
+  const centerY = size.height / 2;
+
+  try {
+    await canvasRef.value.playEffect("preview_effect", centerX, centerY, {
+      scale: effectConfig.scale,
+    });
+  } catch (error) {
+    console.error("播放特效失败:", error);
+    status.value = "播放失败";
+    setTimeout(() => (status.value = ""), 2000);
+  }
+}
+
+// 画布就绪回调
+function onCanvasReady(): void {
+  console.log("特效预览画布已就绪");
 }
 
 // 输入框样式
@@ -325,19 +393,36 @@ const inputClass =
 
     <template #right>
       <div class="flex h-full w-full flex-1 flex-col overflow-hidden">
-        <!-- 预览画布 -->
-        <div class="w-full flex-1 overflow-hidden">
-          <CanvasPreview
-            ref="canvasPreviewRef"
-            :config="previewConfig"
-            :fps="fps"
-            :current-frame="currentFrame"
-            :playing="playing"
-            @update:fps="fps = $event"
-            @update:current-frame="currentFrame = $event"
-            @update:playing="playing = $event"
-            @refresh="handleCanvasRefresh"
-          />
+        <!-- 预览画布 - 使用 GameCanvas -->
+        <div class="relative w-full flex-1 overflow-hidden">
+          <GameCanvas
+            ref="canvasRef"
+            :game-data="gameData"
+            :show-units="false"
+            :enable-transform="true"
+            @canvas:ready="onCanvasReady"
+          >
+            <!-- 覆盖层：播放特效按钮 -->
+            <template #overlay="{ canvasSize }">
+              <div class="absolute bottom-4 left-4 z-10 flex gap-2">
+                <button
+                  class="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700"
+                  type="button"
+                  :disabled="!effectConfig.url"
+                  :class="{ 'cursor-not-allowed opacity-50': !effectConfig.url }"
+                  @click="playCurrentEffect"
+                >
+                  <PlayArrowOutlined class="size-4" />
+                  <span>播放特效</span>
+                </button>
+              </div>
+              <div
+                class="absolute bottom-4 right-4 z-10 rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs text-slate-600 backdrop-blur-sm"
+              >
+                {{ canvasSize.width }} × {{ canvasSize.height }}
+              </div>
+            </template>
+          </GameCanvas>
         </div>
 
         <!-- 时间轴 -->

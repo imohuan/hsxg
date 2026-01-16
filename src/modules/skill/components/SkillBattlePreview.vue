@@ -1,10 +1,13 @@
 <script setup lang="ts">
 /**
  * @file 技能战斗预览画布
- * @description 使用 Canvas 绘制战斗预览，支持缩放、平移、单位选择
+ * @description 使用 GameCanvas 绘制战斗预览，支持缩放、平移、单位选择
+ * 集成步骤执行器，使用 executeStep API 执行技能步骤
+ * Requirements: 1.6, 15.1-15.6
  */
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import type { TimelineSegment } from "@/types";
+import { computed, ref, watch, onMounted, onBeforeUnmount } from "vue";
+import type { TimelineSegment, BattleSceneConfig, BattleUnit, SkillStep } from "@/types";
+import GameCanvas from "@/components/gamecanvas/GameCanvas.vue";
 import {
   SKILL_SANDBOX_UNITS,
   getSandboxUnitById,
@@ -32,52 +35,73 @@ const emit = defineEmits<{
 
 // ============ 状态 ============
 
-const containerRef = ref<HTMLDivElement | null>(null);
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-const ctx = ref<CanvasRenderingContext2D | null>(null);
-
-// 相机状态
-const camera = ref({
-  scale: 0.95,
-  offsetX: 0,
-  offsetY: 0,
-});
-
-// 拖拽状态
-const draggingState = ref({
-  dragging: false,
-  startX: 0,
-  startY: 0,
-  originX: 0,
-  originY: 0,
-});
-
-// 基础画布尺寸
-const base = {
-  width: 960,
-  height: 540,
-};
+const canvasRef = ref<InstanceType<typeof GameCanvas> | null>(null);
 
 // 动画帧句柄
 const rafHandle = ref<number | null>(null);
 const lastTick = ref(0);
 
+// 当前正在执行的片段 ID（避免重复执行）
+const executingSegmentId = ref<string | null>(null);
+
+// 画布尺寸
+const CANVAS_WIDTH = 960;
+const CANVAS_HEIGHT = 540;
+
 // ============ 计算属性 ============
 
-// 计算单位站位
-const unitPositions = computed(() => {
-  const playerUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "player");
-  const enemyUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "enemy");
-  const playerPositions = calculateStaggeredPositions(playerUnits, base.width, base.height);
-  const enemyPositions = calculateStaggeredPositions(enemyUnits, base.width, base.height);
+/** 将 SkillSandboxUnit 转换为 BattleUnit */
+function toBattleUnit(unit: SkillSandboxUnit): BattleUnit {
+  return {
+    id: unit.id,
+    name: unit.name,
+    hp: unit.hp,
+    maxHp: unit.maxHp,
+    mp: unit.mp,
+    maxMp: unit.maxMp,
+    speed: unit.level,
+    isDead: unit.hp <= 0,
+    selectable: isUnitSelectable(unit),
+  };
+}
 
-  const allPositions = new Map<string, { x: number; y: number }>();
-  playerPositions.forEach((pos, id) => allPositions.set(id, pos));
-  enemyPositions.forEach((pos, id) => allPositions.set(id, pos));
-  return allPositions;
+/** 判断单位是否可选 */
+function isUnitSelectable(unit: SkillSandboxUnit): boolean {
+  const modes = props.targetingModes;
+  const actorId = props.casterId;
+  if (unit.id === actorId) return modes.includes("self");
+  if (unit.side === "player") return modes.includes("ally");
+  if (unit.side === "enemy") return modes.includes("enemy");
+  return false;
+}
+
+/** 施法者单位 */
+const actorUnit = computed(() => {
+  return (
+    getSandboxUnitById(props.casterId) ??
+    SKILL_SANDBOX_UNITS.find((unit) => unit.side === "player") ??
+    null
+  );
 });
 
-// 当前激活的片段
+/** 画布场景配置 */
+const canvasConfig = computed<BattleSceneConfig>(() => {
+  const playerUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "player").map(toBattleUnit);
+  const enemyUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "enemy").map(toBattleUnit);
+
+  return {
+    sceneName: "技能预览",
+    backgroundColor: "#f1f5f9",
+    enemyPlayerName: "敌方",
+    playerName: "我方",
+    enemyUnits,
+    playerUnits,
+    activeUnitId: actorUnit.value?.id,
+    turnInfo: `帧 ${props.currentFrame + 1}/${Math.max(1, props.totalFrames)}`,
+  };
+});
+
+/** 当前激活的片段 */
 const activeSegment = computed(() => {
   return (
     props.segments.find(
@@ -87,449 +111,268 @@ const activeSegment = computed(() => {
   );
 });
 
-// 施法者单位
-const actorUnit = computed(() => {
-  return (
-    getSandboxUnitById(props.casterId) ??
-    SKILL_SANDBOX_UNITS.find((unit) => unit.side === "player") ??
-    null
-  );
-});
+/** 计算单位位置映射 */
+const unitPositions = computed(() => {
+  const playerUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "player");
+  const enemyUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "enemy");
+  const playerPositions = calculateStaggeredPositions(playerUnits, CANVAS_WIDTH, CANVAS_HEIGHT);
+  const enemyPositions = calculateStaggeredPositions(enemyUnits, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-// 预览目标
-const previewTargets = computed(() => {
-  const ids = props.selectedTargetIds;
-  if (ids.length) {
-    return SKILL_SANDBOX_UNITS.filter((unit) => ids.includes(unit.id));
-  }
-  if (props.targetingModes.includes("enemy")) {
-    return SKILL_SANDBOX_UNITS.filter((unit) => unit.side === "enemy").slice(0, 1);
-  }
-  if (actorUnit.value) {
-    return [actorUnit.value];
-  }
-  return [];
+  const allPositions = new Map<string, { x: number; y: number }>();
+  playerPositions.forEach((pos, id) => allPositions.set(id, pos));
+  enemyPositions.forEach((pos, id) => allPositions.set(id, pos));
+  return allPositions;
 });
 
 // ============ 方法 ============
 
-// 确保画布尺寸
-const ensureCanvasSize = () => {
-  if (!containerRef.value || !canvasRef.value) return;
-  const { clientWidth, clientHeight } = containerRef.value;
-  canvasRef.value.width = clientWidth;
-  canvasRef.value.height = clientHeight;
-};
+/** 重置视图 */
+function resetView(): void {
+  canvasRef.value?.resetCamera(300);
+}
 
-// 重置视图
-const resetView = () => {
-  camera.value = { scale: 0.95, offsetX: 0, offsetY: 0 };
-  draw();
-};
+/** 回到开始 */
+function goToStart(): void {
+  emit("update:current-frame", 0);
+  // 重置所有单位位置
+  canvasRef.value?.resetAllUnitPositions();
+  executingSegmentId.value = null;
+}
 
-// 世界坐标转屏幕坐标
-const project = (unit: SkillSandboxUnit) => {
-  if (!canvasRef.value) return { x: 0, y: 0 };
-  const { width, height } = canvasRef.value;
-  const position = unitPositions.value.get(unit.id) || { x: base.width / 2, y: base.height / 2 };
-  const worldX = position.x - base.width / 2;
-  const worldY = position.y - base.height / 2;
-  const x = (worldX + camera.value.offsetX) * camera.value.scale + width / 2;
-  const y = (worldY + camera.value.offsetY) * camera.value.scale + height / 2;
-  return { x, y };
-};
-
-// 绘制背景
-const drawBackground = () => {
-  if (!ctx.value || !canvasRef.value) return;
-  const { width, height } = canvasRef.value;
-
-  // 亮色渐变背景
-  const gradient = ctx.value.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, "#f8fafc");
-  gradient.addColorStop(0.6, "#f1f5f9");
-  gradient.addColorStop(1, "#e2e8f0");
-  ctx.value.fillStyle = gradient;
-  ctx.value.fillRect(0, 0, width, height);
-
-  // 网格线
-  ctx.value.strokeStyle = "rgba(148,163,184,0.2)";
-  ctx.value.lineWidth = 1;
-  for (let i = -base.width; i <= base.width; i += 100) {
-    const start = { x: (i + camera.value.offsetX) * camera.value.scale + width / 2, y: 0 };
-    ctx.value.beginPath();
-    ctx.value.moveTo(start.x, 0);
-    ctx.value.lineTo(start.x, height);
-    ctx.value.stroke();
+/** 处理单位点击 */
+function handleUnitClick(unitId: string): void {
+  const unit = getSandboxUnitById(unitId);
+  if (unit && isUnitSelectable(unit)) {
+    emit("toggle-target", unitId);
   }
-  for (let j = -base.height; j <= base.height; j += 80) {
-    const y = (j + camera.value.offsetY) * camera.value.scale + height / 2;
-    ctx.value.beginPath();
-    ctx.value.moveTo(0, y);
-    ctx.value.lineTo(width, y);
-    ctx.value.stroke();
-  }
+}
 
-  // 地面阴影
-  ctx.value.fillStyle = "rgba(226,232,240,0.6)";
-  const groundY = (100 + camera.value.offsetY) * camera.value.scale + height / 2;
-  ctx.value.fillRect(0, groundY, width, height - groundY);
-};
+/**
+ * 解析步骤参数中的表达式
+ * 支持 actorX, actorY, targetX, targetY 等变量
+ * Requirements: 15.1-15.6
+ */
+function resolveStepParams(step: SkillStep): SkillStep {
+  const actorId = props.casterId;
+  const targetIds = props.selectedTargetIds;
+  const firstTargetId = targetIds.length > 0 ? targetIds[0] : null;
 
-// 绘制圆角矩形
-const drawRoundedRect = (
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  radius: number,
-) => {
-  const r = Math.min(radius, w / 2, h / 2);
-  context.beginPath();
-  context.moveTo(x + r, y);
-  context.lineTo(x + w - r, y);
-  context.quadraticCurveTo(x + w, y, x + w, y + r);
-  context.lineTo(x + w, y + h - r);
-  context.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  context.lineTo(x + r, y + h);
-  context.quadraticCurveTo(x, y + h, x, y + h - r);
-  context.lineTo(x, y + r);
-  context.quadraticCurveTo(x, y, x + r, y);
-  context.closePath();
-};
+  // 获取施法者位置
+  const actorPos = unitPositions.value.get(actorId) || {
+    x: CANVAS_WIDTH / 2,
+    y: CANVAS_HEIGHT / 2,
+  };
+  // 获取第一个目标位置
+  const targetPos = firstTargetId
+    ? unitPositions.value.get(firstTargetId) || { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 }
+    : { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
 
-// 绘制单位
-const drawUnit = (unit: SkillSandboxUnit, highlight: "actor" | "target" | null) => {
-  if (!ctx.value) return;
-  const { x, y } = project(unit);
-  const bodyWidth = 90 * camera.value.scale;
-  const bodyHeight = 120 * camera.value.scale;
+  // 创建变量上下文
+  const context: Record<string, number> = {
+    actorX: actorPos.x,
+    actorY: actorPos.y,
+    targetX: targetPos.x,
+    targetY: targetPos.y,
+    canvasWidth: CANVAS_WIDTH,
+    canvasHeight: CANVAS_HEIGHT,
+  };
 
-  // 高亮圈
-  if (highlight === "actor") {
-    ctx.value.strokeStyle = "rgba(99, 102, 241, 0.8)";
-    ctx.value.lineWidth = 6;
-    ctx.value.beginPath();
-    ctx.value.arc(x, y + 20 * camera.value.scale, bodyWidth, 0, Math.PI * 2);
-    ctx.value.stroke();
-  } else if (highlight === "target") {
-    ctx.value.strokeStyle = "rgba(245, 158, 11, 0.9)";
-    ctx.value.lineWidth = 4;
-    ctx.value.beginPath();
-    ctx.value.arc(x, y + 20 * camera.value.scale, bodyWidth * 0.9, 0, Math.PI * 2);
-    ctx.value.stroke();
-  }
+  // 解析参数
+  const resolvedParams = { ...step.params };
 
-  // 身体
-  ctx.value.fillStyle = unit.side === "player" ? "rgba(99,102,241,0.7)" : "rgba(244,63,94,0.7)";
-  ctx.value.strokeStyle = "#1e293b";
-  ctx.value.lineWidth = 2;
-  drawRoundedRect(
-    ctx.value,
-    x - bodyWidth / 2,
-    y - bodyHeight / 2,
-    bodyWidth,
-    bodyHeight,
-    12 * camera.value.scale,
-  );
-  ctx.value.fill();
-  ctx.value.stroke();
-
-  // 名称背景
-  ctx.value.fillStyle = "rgba(255,255,255,0.9)";
-  drawRoundedRect(
-    ctx.value,
-    x - bodyWidth / 2,
-    y - bodyHeight / 2 - 30 * camera.value.scale,
-    bodyWidth,
-    32 * camera.value.scale,
-    10 * camera.value.scale,
-  );
-  ctx.value.fill();
-
-  // 名称文字
-  ctx.value.fillStyle = "#334155";
-  ctx.value.font = `${12 * camera.value.scale}px sans-serif`;
-  ctx.value.textAlign = "center";
-  ctx.value.fillText(unit.name, x, y - bodyHeight / 2 - 12 * camera.value.scale);
-
-  // 血条
-  const hpPercent = unit.hp / unit.maxHp;
-  ctx.value.fillStyle = "rgba(226,232,240,0.9)";
-  const barWidth = bodyWidth;
-  const barHeight = 8 * camera.value.scale;
-  ctx.value.fillRect(
-    x - barWidth / 2,
-    y + bodyHeight / 2 + 6 * camera.value.scale,
-    barWidth,
-    barHeight,
-  );
-  ctx.value.fillStyle = hpPercent > 0.4 ? "#10b981" : "#f43f5e";
-  ctx.value.fillRect(
-    x - barWidth / 2,
-    y + bodyHeight / 2 + 6 * camera.value.scale,
-    barWidth * Math.max(0, Math.min(1, hpPercent)),
-    barHeight,
-  );
-};
-
-// 绘制当前激活的效果
-const drawActiveEffect = () => {
-  if (!ctx.value || !actorUnit.value) return;
-  const segment = activeSegment.value;
-  if (!segment) return;
-
-  const actorPos = project(actorUnit.value);
-  const targets = previewTargets.value;
-  const center =
-    targets.length > 0
-      ? targets
-          .map((unit) => project(unit))
-          .reduce(
-            (acc, pos) => ({
-              x: acc.x + pos.x / targets.length,
-              y: acc.y + pos.y / targets.length,
-            }),
-            {
-              x: 0,
-              y: 0,
-            },
-          )
-      : actorPos;
-
-  const stepType = segment.step?.type;
-
-  if (stepType === "move") {
-    ctx.value.strokeStyle = "rgba(99,102,241,0.8)";
-    ctx.value.lineWidth = 3;
-    ctx.value.setLineDash([10, 8]);
-    ctx.value.beginPath();
-    ctx.value.moveTo(actorPos.x, actorPos.y);
-    ctx.value.lineTo(center.x, center.y);
-    ctx.value.stroke();
-    ctx.value.setLineDash([]);
-  } else if (stepType === "damage") {
-    targets.forEach((unit) => {
-      const pos = project(unit);
-      ctx.value!.strokeStyle = "rgba(244,63,94,0.9)";
-      ctx.value!.lineWidth = 5;
-      ctx.value!.beginPath();
-      ctx.value!.arc(pos.x, pos.y, 40 * camera.value.scale, 0, Math.PI * 2);
-      ctx.value!.stroke();
-    });
-  } else if (stepType === "effect") {
-    ctx.value.fillStyle = "rgba(139,92,246,0.25)";
-    ctx.value.beginPath();
-    ctx.value.arc(center.x, center.y, 120 * camera.value.scale, 0, Math.PI * 2);
-    ctx.value.fill();
-  }
-};
-
-// 绘制 HUD
-const drawHud = () => {
-  if (!ctx.value || !canvasRef.value) return;
-  const { width } = canvasRef.value;
-
-  // 左上角信息
-  const info = `帧 ${props.currentFrame + 1}/${Math.max(1, props.totalFrames)}`;
-  ctx.value.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.value.strokeStyle = "rgba(148,163,184,0.3)";
-  ctx.value.lineWidth = 1;
-  drawRoundedRect(ctx.value, 20, 20, 200, 50, 8);
-  ctx.value.fill();
-  ctx.value.stroke();
-  ctx.value.fillStyle = "#334155";
-  ctx.value.font = "14px sans-serif";
-  ctx.value.textAlign = "left";
-  ctx.value.fillText(info, 36, 42);
-  if (activeSegment.value) {
-    ctx.value.fillStyle = "#64748b";
-    ctx.value.fillText(`当前: ${activeSegment.value.step?.type || "无"}`, 36, 60);
-  }
-
-  // 右上角信息
-  ctx.value.fillStyle = "rgba(255,255,255,0.95)";
-  drawRoundedRect(ctx.value, width - 180, 20, 160, 50, 8);
-  ctx.value.fill();
-  ctx.value.stroke();
-  ctx.value.fillStyle = "#6366f1";
-  ctx.value.textAlign = "left";
-  ctx.value.fillText(`缩放 ${camera.value.scale.toFixed(2)}x`, width - 160, 42);
-  ctx.value.fillStyle = "#0891b2";
-  ctx.value.fillText(`目标 ${previewTargets.value.length}`, width - 160, 60);
-};
-
-// 主绘制函数
-const draw = () => {
-  if (!ctx.value || !canvasRef.value) return;
-  ctx.value.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
-  drawBackground();
-
-  SKILL_SANDBOX_UNITS.forEach((unit) => {
-    let highlight: "actor" | "target" | null = null;
-    if (actorUnit.value && unit.id === actorUnit.value.id) {
-      highlight = "actor";
-    } else if (previewTargets.value.some((target) => target.id === unit.id)) {
-      highlight = "target";
+  // 解析数值表达式
+  const resolveValue = (value: unknown): unknown => {
+    if (typeof value === "string") {
+      // 尝试解析为表达式
+      try {
+        // 简单的表达式解析：替换变量名为实际值
+        let expr = value;
+        for (const [key, val] of Object.entries(context)) {
+          expr = expr.replace(new RegExp(`\\b${key}\\b`, "g"), String(val));
+        }
+        // 计算简单的数学表达式
+        // eslint-disable-next-line no-new-func
+        const result = new Function(`return ${expr}`)();
+        if (typeof result === "number" && !isNaN(result)) {
+          return result;
+        }
+      } catch {
+        // 解析失败，返回原值
+      }
     }
-    drawUnit(unit, highlight);
-  });
+    return value;
+  };
 
-  drawActiveEffect();
-  drawHud();
-};
+  // 解析关键参数
+  if (resolvedParams.targetX !== undefined) {
+    resolvedParams.targetX = resolveValue(resolvedParams.targetX) as number;
+  }
+  if (resolvedParams.targetY !== undefined) {
+    resolvedParams.targetY = resolveValue(resolvedParams.targetY) as number;
+  }
+  if (resolvedParams.x !== undefined) {
+    resolvedParams.x = resolveValue(resolvedParams.x) as number;
+  }
+  if (resolvedParams.y !== undefined) {
+    resolvedParams.y = resolveValue(resolvedParams.y) as number;
+  }
 
-// 动画循环
-const tick = (timestamp: number) => {
+  // 设置默认的 unitId（施法者）
+  if (!resolvedParams.unitId && step.type === "move") {
+    resolvedParams.unitId = actorId;
+  }
+
+  return {
+    ...step,
+    params: resolvedParams,
+  };
+}
+
+/**
+ * 执行当前片段的步骤
+ * Requirements: 15.1-15.6
+ */
+async function executeCurrentSegmentStep(): Promise<void> {
+  const segment = activeSegment.value;
+  if (!segment || !segment.step || !canvasRef.value) return;
+
+  // 避免重复执行同一片段
+  if (executingSegmentId.value === segment.id) return;
+  executingSegmentId.value = segment.id;
+
+  // 解析步骤参数
+  const resolvedStep = resolveStepParams(segment.step);
+
+  try {
+    // 使用 executeStep API 执行步骤
+    await canvasRef.value.executeStep(resolvedStep);
+  } catch (error) {
+    console.warn("[SkillBattlePreview] 步骤执行失败:", error);
+  }
+}
+
+/** 动画循环 - 处理帧播放 */
+function tick(timestamp: number): void {
   if (!props.playing || props.totalFrames <= 1) {
     lastTick.value = timestamp;
   } else if (timestamp - lastTick.value >= 1000 / props.fps) {
     const next = props.currentFrame + 1 >= props.totalFrames ? 0 : props.currentFrame + 1;
     emit("update:current-frame", next);
     lastTick.value = timestamp;
+
+    // 如果回到开始，重置执行状态
+    if (next === 0) {
+      executingSegmentId.value = null;
+      canvasRef.value?.resetAllUnitPositions();
+    }
   }
-  draw();
   rafHandle.value = requestAnimationFrame(tick);
-};
-
-// 滚轮缩放
-const handleWheel = (event: WheelEvent) => {
-  event.preventDefault();
-  const delta = -event.deltaY * 0.001;
-  const nextScale = Math.min(2.5, Math.max(0.5, camera.value.scale + delta));
-  camera.value.scale = nextScale;
-  draw();
-};
-
-// 获取鼠标下的单位
-const getUnitUnderPointer = (event: PointerEvent): SkillSandboxUnit | null => {
-  if (!canvasRef.value) return null;
-  const rect = canvasRef.value.getBoundingClientRect();
-  const pointerX = event.clientX - rect.left;
-  const pointerY = event.clientY - rect.top;
-
-  for (const unit of SKILL_SANDBOX_UNITS) {
-    const { x, y } = project(unit);
-    const w = 90 * camera.value.scale;
-    const h = 120 * camera.value.scale;
-    if (Math.abs(pointerX - x) <= w / 2 && Math.abs(pointerY - y) <= h / 2) {
-      return unit;
-    }
-  }
-  return null;
-};
-
-// 判断单位是否可选
-const isUnitSelectable = (unit: SkillSandboxUnit): boolean => {
-  const modes = props.targetingModes;
-  const actorId = actorUnit.value?.id;
-  if (unit.id === actorId) return modes.includes("self");
-  if (unit.side === "player") return modes.includes("ally");
-  if (unit.side === "enemy") return modes.includes("enemy");
-  return false;
-};
-
-// 鼠标按下
-const handlePointerDown = (event: PointerEvent) => {
-  const targetUnit = getUnitUnderPointer(event);
-  if (event.button === 0 && targetUnit) {
-    if (isUnitSelectable(targetUnit)) {
-      emit("toggle-target", targetUnit.id);
-    }
-    return;
-  }
-
-  draggingState.value = {
-    dragging: true,
-    startX: event.clientX,
-    startY: event.clientY,
-    originX: camera.value.offsetX,
-    originY: camera.value.offsetY,
-  };
-};
-
-// 鼠标移动
-const handlePointerMove = (event: PointerEvent) => {
-  if (!draggingState.value.dragging) return;
-  const dx = (event.clientX - draggingState.value.startX) / camera.value.scale;
-  const dy = (event.clientY - draggingState.value.startY) / camera.value.scale;
-  camera.value.offsetX = draggingState.value.originX + dx;
-  camera.value.offsetY = draggingState.value.originY + dy;
-  draw();
-};
-
-// 停止拖拽
-const stopDragging = () => {
-  draggingState.value.dragging = false;
-};
+}
 
 // ============ 生命周期 ============
 
 onMounted(() => {
-  ensureCanvasSize();
-  ctx.value = canvasRef.value?.getContext("2d") ?? null;
-  draw();
-  window.addEventListener("resize", ensureCanvasSize);
-  window.addEventListener("pointerup", stopDragging);
-  window.addEventListener("pointermove", handlePointerMove);
   rafHandle.value = requestAnimationFrame(tick);
 });
 
 onBeforeUnmount(() => {
-  if (rafHandle.value) cancelAnimationFrame(rafHandle.value);
-  window.removeEventListener("resize", ensureCanvasSize);
-  window.removeEventListener("pointerup", stopDragging);
-  window.removeEventListener("pointermove", handlePointerMove);
+  if (rafHandle.value) {
+    cancelAnimationFrame(rafHandle.value);
+  }
 });
 
-// 监听数据变化重绘
+// ============ 监听变化更新高亮 ============
+
 watch(
-  () => ({
-    frame: props.currentFrame,
-    caster: props.casterId,
-    targets: props.selectedTargetIds.slice(),
-    modes: props.targetingModes.slice(),
-    segments: props.segments.map((s) => ({
-      start: s.startFrame,
-      end: s.endFrame,
-      type: s.step?.type,
-    })),
-  }),
-  () => draw(),
-  { deep: true },
+  () => props.casterId,
+  (newCasterId) => {
+    // 更新当前行动单位高亮
+    canvasRef.value?.setActiveUnit(newCasterId ? newCasterId : null);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => props.selectedTargetIds,
+  (newTargetIds) => {
+    // 更新目标单位高亮（只高亮第一个目标）
+    const firstTarget = newTargetIds.length > 0 ? newTargetIds[0] : null;
+    canvasRef.value?.setTargetUnit(firstTarget ?? null);
+  },
+  { deep: true, immediate: true },
+);
+
+// 监听当前帧变化，执行对应步骤
+watch(
+  () => activeSegment.value,
+  (newSegment, oldSegment) => {
+    // 当进入新片段时执行步骤
+    if (newSegment && newSegment.id !== oldSegment?.id && props.playing) {
+      executeCurrentSegmentStep();
+    }
+  },
+);
+
+// 监听播放状态变化
+watch(
+  () => props.playing,
+  (isPlaying) => {
+    if (!isPlaying) {
+      // 暂停时重置执行状态，允许下次播放时重新执行
+      executingSegmentId.value = null;
+    }
+  },
 );
 </script>
 
 <template>
   <div
-    ref="containerRef"
-    class="relative flex h-full w-full overflow-hidden rounded-t-xl border-b border-slate-200 bg-slate-100"
-    @wheel="handleWheel"
+    class="relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
   >
-    <canvas
+    <!-- 游戏画布 - 16:9 比例，亮色主题，enableTransform=true -->
+    <GameCanvas
       ref="canvasRef"
-      class="h-full w-full cursor-grab active:cursor-grabbing"
-      @pointerdown="handlePointerDown"
+      :config="canvasConfig"
+      :enable-transform="true"
+      :width="CANVAS_WIDTH"
+      :height="CANVAS_HEIGHT"
+      class="absolute inset-0 h-full w-full"
+      @unit-click="handleUnitClick"
     />
-    <!-- 控制按钮 -->
+
+    <!-- 左上角：控制按钮 -->
     <div
-      class="absolute top-4 left-4 flex flex-wrap gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur"
+      class="absolute top-14 left-4 z-20 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm"
     >
       <button
-        class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
+        class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
         type="button"
         @click="resetView"
       >
         重置视图
       </button>
       <button
-        class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
+        class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
         type="button"
-        @click="$emit('update:current-frame', 0)"
+        @click="goToStart"
       >
         回到开始
       </button>
+    </div>
+
+    <!-- 左下角：当前步骤信息 -->
+    <div
+      v-if="activeSegment"
+      class="absolute bottom-4 left-4 z-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur-sm"
+    >
+      当前步骤: {{ activeSegment.step?.type || "无" }}
+    </div>
+
+    <!-- 右下角：目标数量显示 -->
+    <div
+      class="absolute right-4 bottom-4 z-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur-sm"
+    >
+      目标: {{ selectedTargetIds.length }}
     </div>
   </div>
 </template>

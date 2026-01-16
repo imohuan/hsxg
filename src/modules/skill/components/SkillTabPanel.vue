@@ -36,11 +36,9 @@ const stepButtons: Array<{ label: string; type: StepType; description: string; i
 
 // ============ 拖拽 ============
 
-const { dragging: libraryDragging, onMouseDown: handleLibraryMouseDown } = useLibraryDragToTimeline(
-  (payload) => {
-    emit("drop-step-from-library", payload);
-  },
-);
+const { dragging: libraryDragging, onMouseDown: handleLibraryMouseDown } = useLibraryDragToTimeline((payload) => {
+  emit("drop-step-from-library", payload);
+});
 
 // ============ 计算属性 ============
 

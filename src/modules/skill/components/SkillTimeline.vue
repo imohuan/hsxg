@@ -122,9 +122,7 @@ const leftScrollContainer = ref<HTMLDivElement | null>(null);
 const rightScrollContainer = ref<HTMLDivElement | null>(null);
 
 // 轨道管理
-const tracks = ref<TimelineTrack[]>([
-  { id: "main-track", name: "轨道 1", locked: false, hidden: false },
-]);
+const tracks = ref<TimelineTrack[]>([{ id: "main-track", name: "轨道 1", locked: false, hidden: false }]);
 let trackCounter = 1;
 
 // 时间轴项目
@@ -191,9 +189,7 @@ const rulerTicks = computed(() => {
   // 只生成可见范围内的刻度，避免生成过多元素
   const minPxBetweenTicks = 3; // 刻度之间最小像素间隔
   const actualSubInterval =
-    pxPerFrame * subInterval < minPxBetweenTicks
-      ? Math.ceil(minPxBetweenTicks / pxPerFrame)
-      : subInterval;
+    pxPerFrame * subInterval < minPxBetweenTicks ? Math.ceil(minPxBetweenTicks / pxPerFrame) : subInterval;
 
   for (let f = 0; f <= maxFrame; f += actualSubInterval) {
     if (f % majorInterval === 0) {
@@ -368,12 +364,7 @@ const findValidPosition = (
       const beforeStart = referenceItem.startFrame - durationFrames;
       // 检查前面是否有足够空间（不能小于0，也不能与前面的标签重叠）
       if (beforeStart >= 0) {
-        const { hasOverlap } = checkOverlap(
-          trackId,
-          beforeStart,
-          referenceItem.startFrame,
-          ignoreId,
-        );
+        const { hasOverlap } = checkOverlap(trackId, beforeStart, referenceItem.startFrame, ignoreId);
         if (!hasOverlap) {
           return beforeStart;
         }
@@ -397,12 +388,7 @@ const findValidPosition = (
     const itemEnd = item.startFrame + item.durationFrames;
 
     const afterStart = itemEnd;
-    const { hasOverlap: afterOverlap } = checkOverlap(
-      trackId,
-      afterStart,
-      afterStart + durationFrames,
-      ignoreId,
-    );
+    const { hasOverlap: afterOverlap } = checkOverlap(trackId, afterStart, afterStart + durationFrames, ignoreId);
     if (!afterOverlap) {
       return afterStart;
     }
@@ -476,11 +462,7 @@ const handleItemMouseDown = (e: MouseEvent, item: TimelineItem) => {
   startDrag(e, item, "move");
 };
 
-const startDrag = (
-  e: MouseEvent,
-  item: TimelineItem,
-  type: "move" | "resize-left" | "resize-right",
-) => {
+const startDrag = (e: MouseEvent, item: TimelineItem, type: "move" | "resize-left" | "resize-right") => {
   if (!rightScrollContainer.value || isTrackLocked(item.trackId)) return;
 
   const containerRect = rightScrollContainer.value.getBoundingClientRect();
@@ -503,8 +485,7 @@ const startDrag = (
 const onMouseMove = (e: MouseEvent) => {
   if (!dragging.value || !rightScrollContainer.value) return;
 
-  const { type, itemId, clickOffsetPx, startX, originalStartFrame, originalDurationFrames } =
-    dragging.value;
+  const { type, itemId, clickOffsetPx, startX, originalStartFrame, originalDurationFrames } = dragging.value;
   const rect = rightScrollContainer.value.getBoundingClientRect();
   const item = timelineItems.value.find((i) => i.id === itemId);
   if (!item) return;
@@ -513,8 +494,7 @@ const onMouseMove = (e: MouseEvent) => {
     // 计算新的轨道
     const relativeY = e.clientY - rect.top + rightScrollContainer.value.scrollTop - 32;
     const trackIndex = Math.floor(relativeY / TRACK_HEIGHT);
-    const newTrack =
-      visibleTracks.value[Math.max(0, Math.min(visibleTracks.value.length - 1, trackIndex))];
+    const newTrack = visibleTracks.value[Math.max(0, Math.min(visibleTracks.value.length - 1, trackIndex))];
     if (!newTrack) {
       snapLine.value = null;
       insertLine.value = null;
@@ -599,9 +579,7 @@ const onMouseMove = (e: MouseEvent) => {
 
     // 防止与右侧片段重叠
     const siblings = getTrackItems(item.trackId, item.id);
-    const nextItem = siblings.find(
-      (s) => s.startFrame >= originalStartFrame + originalDurationFrames,
-    );
+    const nextItem = siblings.find((s) => s.startFrame >= originalStartFrame + originalDurationFrames);
     if (nextItem) {
       const maxEndFrame = nextItem.startFrame;
       if (originalStartFrame + newDurationFrames > maxEndFrame) {
@@ -630,9 +608,7 @@ const onMouseMove = (e: MouseEvent) => {
 
       // 防止与左侧片段重叠
       const siblings = getTrackItems(item.trackId, item.id);
-      const prevItem = [...siblings]
-        .reverse()
-        .find((s) => s.startFrame + s.durationFrames <= originalStartFrame);
+      const prevItem = [...siblings].reverse().find((s) => s.startFrame + s.durationFrames <= originalStartFrame);
       if (prevItem) {
         const minStartFrame = prevItem.startFrame + prevItem.durationFrames;
         if (newStartFrame < minStartFrame) {
@@ -653,10 +629,7 @@ const onMouseUp = () => {
     if (item) {
       const maxFrames = props.totalFrames > 0 ? props.totalFrames + 60 : 6000;
       const newStartFrame = Math.max(0, Math.min(item.startFrame, maxFrames));
-      const newEndFrame = Math.max(
-        newStartFrame + 1,
-        Math.min(newStartFrame + item.durationFrames, maxFrames),
-      );
+      const newEndFrame = Math.max(newStartFrame + 1, Math.min(newStartFrame + item.durationFrames, maxFrames));
 
       // 传递 trackId，支持跨轨道拖拽
       emit("update-segment", item.stepIndex, newStartFrame, newEndFrame, item.trackId);
@@ -804,10 +777,7 @@ watch(
     const relativeX = x - rect.left + scrollLeft;
     const relativeY = y - rect.top + scrollTop - 32;
 
-    const trackIndex = Math.max(
-      0,
-      Math.min(visibleTracks.value.length - 1, Math.floor(relativeY / TRACK_HEIGHT)),
-    );
+    const trackIndex = Math.max(0, Math.min(visibleTracks.value.length - 1, Math.floor(relativeY / TRACK_HEIGHT)));
     const targetTrack = visibleTracks.value[trackIndex];
     if (!targetTrack) {
       ghostItem.value = null;
@@ -858,12 +828,7 @@ watch(
             @click="addTrack"
           >
             <svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             添加轨道
           </button>
@@ -879,22 +844,15 @@ watch(
             :style="{ height: TRACK_HEIGHT + 'px' }"
           >
             <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-              <div
-                class="h-4 w-1 shrink-0 rounded-full"
-                :class="track.hidden ? 'bg-slate-300' : 'bg-indigo-500'"
-              />
+              <div class="h-4 w-1 shrink-0 rounded-full" :class="track.hidden ? 'bg-slate-300' : 'bg-indigo-500'" />
               <span
                 class="truncate text-xs font-medium text-slate-600"
                 :class="{ 'line-through': track.hidden, 'text-amber-600': track.locked }"
               >
                 {{ track.name }}
               </span>
-              <span v-if="track.locked" class="shrink-0 text-[10px] text-amber-500" title="已锁定"
-                >🔒</span
-              >
-              <span v-if="track.hidden" class="shrink-0 text-[10px] text-slate-400" title="已隐藏"
-                >👁️</span
-              >
+              <span v-if="track.locked" class="shrink-0 text-[10px] text-amber-500" title="已锁定">🔒</span>
+              <span v-if="track.hidden" class="shrink-0 text-[10px] text-slate-400" title="已隐藏">👁️</span>
             </div>
 
             <!-- 操作按钮组 -->
@@ -923,7 +881,7 @@ watch(
                 </svg>
               </button>
               <button
-                class="rounded p-1 hover:bg-slate-200 text-slate-400"
+                class="rounded p-1 text-slate-400 hover:bg-slate-200"
                 :title="track.hidden ? '显示' : '隐藏'"
                 @click.stop="toggleHideTrack(track.id)"
               >
@@ -995,9 +953,7 @@ watch(
                 :style="{ left: frameToPx(tick.frame) + 'px' }"
               >
                 <div class="h-full w-px bg-slate-400" />
-                <div
-                  class="absolute top-0.5 left-1 font-mono text-[10px] text-slate-600 select-none whitespace-nowrap"
-                >
+                <div class="absolute top-0.5 left-1 font-mono text-[10px] whitespace-nowrap text-slate-600 select-none">
                   {{ formatFrame(tick.frame) }}
                 </div>
               </div>
@@ -1010,21 +966,14 @@ watch(
                 <div class="h-full w-px bg-slate-300" />
               </div>
               <!-- 小刻度（帧级别） -->
-              <div
-                v-else
-                class="absolute top-5 h-3"
-                :style="{ left: frameToPx(tick.frame) + 'px' }"
-              >
+              <div v-else class="absolute top-5 h-3" :style="{ left: frameToPx(tick.frame) + 'px' }">
                 <div class="h-full w-px bg-slate-200" />
               </div>
             </template>
           </div>
 
           <!-- 播放头帽子 -->
-          <div
-            class="absolute top-0 bottom-0 z-40 w-0"
-            :style="{ left: timeToPx(currentTime) + 'px' }"
-          >
+          <div class="absolute top-0 bottom-0 z-40 w-0" :style="{ left: timeToPx(currentTime) + 'px' }">
             <div
               class="absolute top-0 h-0 w-0 -translate-x-1/2 cursor-ew-resize border-t-8 border-r-[6px] border-l-[6px] border-t-indigo-500 border-r-transparent border-l-transparent hover:scale-110"
               @mousedown.stop="startScrubbing"
@@ -1056,7 +1005,7 @@ watch(
               :class="[
                 item.colorClass,
                 dragging && dragging.itemId === item.id
-                  ? 'z-50 opacity-90 shadow-xl border-indigo-400'
+                  ? 'z-50 border-indigo-400 opacity-90 shadow-xl'
                   : 'z-10 hover:shadow-md hover:brightness-105',
                 selectedStepIndex === item.stepIndex ? 'border-indigo-500 shadow-indigo-200' : '',
                 isTrackLocked(item.trackId) ? 'cursor-not-allowed opacity-60' : 'cursor-grab',
@@ -1071,17 +1020,11 @@ watch(
               @click.stop="handleItemClick(item)"
             >
               <!-- 内容（留出调节柄空间） -->
-              <div
-                class="flex h-full w-full flex-col justify-center overflow-hidden px-4 pointer-events-none"
-              >
-                <div
-                  class="truncate text-[11px] leading-tight font-bold text-white drop-shadow-sm select-none"
-                >
+              <div class="pointer-events-none flex h-full w-full flex-col justify-center overflow-hidden px-4">
+                <div class="truncate text-[11px] leading-tight font-bold text-white drop-shadow-sm select-none">
                   {{ item.name }}
                 </div>
-                <div class="truncate font-mono text-[9px] text-white/80">
-                  {{ item.durationFrames }}f
-                </div>
+                <div class="truncate font-mono text-[9px] text-white/80">{{ item.durationFrames }}f</div>
               </div>
 
               <!-- 左侧调节柄（使用 capture 确保优先处理） -->
@@ -1090,9 +1033,7 @@ watch(
                 @mousedown.capture.stop.prevent="handleResizeLeftMouseDown($event, item)"
               >
                 <div class="absolute inset-y-0 left-1 flex items-center">
-                  <div
-                    class="h-4 w-0.5 rounded-full bg-white/70 opacity-0 group-hover:opacity-100"
-                  />
+                  <div class="h-4 w-0.5 rounded-full bg-white/70 opacity-0 group-hover:opacity-100" />
                 </div>
               </div>
               <!-- 右侧调节柄（使用 capture 确保优先处理） -->
@@ -1101,9 +1042,7 @@ watch(
                 @mousedown.capture.stop.prevent="handleResizeRightMouseDown($event, item)"
               >
                 <div class="absolute inset-y-0 right-1 flex items-center">
-                  <div
-                    class="h-4 w-0.5 rounded-full bg-white/70 opacity-0 group-hover:opacity-100"
-                  />
+                  <div class="h-4 w-0.5 rounded-full bg-white/70 opacity-0 group-hover:opacity-100" />
                 </div>
               </div>
 
@@ -1114,12 +1053,7 @@ watch(
                 @click.stop="deleteItem(item)"
               >
                 <svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
@@ -1134,9 +1068,7 @@ watch(
             <div
               v-if="ghostItem && !tracks.find((t) => t.id === ghostItem?.trackId)?.hidden"
               class="pointer-events-none absolute z-40 overflow-hidden rounded-lg border border-white/50 opacity-70 shadow-md"
-              :class="
-                ghostItem ? stepTypeColors[ghostItem.stepType] || 'bg-gray-500' : 'bg-gray-500'
-              "
+              :class="ghostItem ? stepTypeColors[ghostItem.stepType] || 'bg-gray-500' : 'bg-gray-500'"
               :style="{
                 left: ghostItem ? frameToPx(ghostItem.startFrame) + 'px' : '0',
                 top: ghostItem ? getTrackIndex(ghostItem.trackId) * TRACK_HEIGHT + 2 + 'px' : '0',
@@ -1145,9 +1077,7 @@ watch(
               }"
             >
               <div class="flex h-full w-full flex-col justify-center overflow-hidden px-2">
-                <div
-                  class="truncate text-[11px] leading-tight font-bold text-white drop-shadow-sm select-none"
-                >
+                <div class="truncate text-[11px] leading-tight font-bold text-white drop-shadow-sm select-none">
                   {{ ghostItem ? stepTypeNames[ghostItem.stepType] || ghostItem.stepType : "" }}
                 </div>
                 <div class="truncate font-mono text-[9px] text-white/80">
@@ -1163,15 +1093,13 @@ watch(
             class="pointer-events-none absolute top-0 bottom-0 z-65"
             :style="{ left: frameToPx(insertLine.frame) + 'px' }"
           >
-            <div
-              class="absolute top-0 bottom-0 w-0.5 bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"
-            />
+            <div class="absolute top-0 bottom-0 w-0.5 bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
             <div class="absolute top-0 flex -translate-x-1/2 flex-col items-center">
               <div
-                class="h-0 w-0 border-b-8 border-l-[6px] border-r-[6px] border-b-blue-400 border-l-transparent border-r-transparent"
+                class="h-0 w-0 border-r-[6px] border-b-8 border-l-[6px] border-r-transparent border-b-blue-400 border-l-transparent"
               />
               <div
-                class="mt-1 whitespace-nowrap rounded bg-blue-400 px-1.5 py-0.5 font-mono text-[10px] font-bold text-blue-950"
+                class="mt-1 rounded bg-blue-400 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-blue-950"
               >
                 {{ insertLine.position === "before" ? "插入前" : "插入后" }}
               </div>

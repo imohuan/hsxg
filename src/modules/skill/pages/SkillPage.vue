@@ -77,8 +77,7 @@ const skillTimelineSegments = computed<TimelineSegment[]>(() => {
         ? params.duration
         : Number(params.duration) || STEP_FRAME_DEFAULT[step.type] || 30;
     const frames = Math.max(1, Math.min(MAX_FRAMES_PER_STEP, Math.round(raw)));
-    const hasStartFrame =
-      typeof params.startFrame === "number" && Number.isFinite(params.startFrame);
+    const hasStartFrame = typeof params.startFrame === "number" && Number.isFinite(params.startFrame);
     const start = hasStartFrame ? Math.max(0, Math.round(params.startFrame as number)) : cursor;
 
     const segment: TimelineSegment = {
@@ -294,9 +293,7 @@ function handleDropStepFromLibrary(payload: LibraryDragPayload): void {
 function handleToggleTarget(unitId: string): void {
   const exists = currentSkillData.selectedTargetIds.includes(unitId);
   if (exists) {
-    currentSkillData.selectedTargetIds = currentSkillData.selectedTargetIds.filter(
-      (id) => id !== unitId,
-    );
+    currentSkillData.selectedTargetIds = currentSkillData.selectedTargetIds.filter((id) => id !== unitId);
   } else {
     currentSkillData.selectedTargetIds = [...currentSkillData.selectedTargetIds, unitId];
   }
@@ -362,9 +359,7 @@ watch(
               <div class="min-w-0 flex-1">
                 <p
                   class="truncate text-sm font-medium"
-                  :class="
-                    designerStore.currentSkillId === skill.id ? 'text-indigo-600' : 'text-slate-700'
-                  "
+                  :class="designerStore.currentSkillId === skill.id ? 'text-indigo-600' : 'text-slate-700'"
                 >
                   {{ skill.name }}
                 </p>
@@ -473,7 +468,7 @@ watch(
           <!-- 拖拽手柄指示器 -->
           <div
             class="absolute flex h-4 w-12 items-center justify-center rounded-full bg-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
-            :class="{ 'opacity-100 bg-indigo-500': isSplitDragging }"
+            :class="{ 'bg-indigo-500 opacity-100': isSplitDragging }"
           >
             <div class="flex gap-0.5">
               <div class="h-0.5 w-3 rounded-full bg-white" />
@@ -512,15 +507,8 @@ watch(
       <!-- 空状态 -->
       <div v-else class="flex h-full items-center justify-center bg-slate-50">
         <div class="text-center">
-          <div
-            class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100"
-          >
-            <svg
-              class="size-8 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+          <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100">
+            <svg class="size-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"

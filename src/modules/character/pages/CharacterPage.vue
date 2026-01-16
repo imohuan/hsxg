@@ -201,12 +201,7 @@ const inputClass =
           <!-- 名称 -->
           <label class="block">
             <span class="mb-1.5 block text-xs font-medium text-slate-600">名称</span>
-            <input
-              v-model="characterName"
-              :class="inputClass"
-              type="text"
-              placeholder="输入角色名称"
-            />
+            <input v-model="characterName" :class="inputClass" type="text" placeholder="输入角色名称" />
           </label>
 
           <!-- 图片：URL 输入 + 上传按钮并排 -->
@@ -230,34 +225,18 @@ const inputClass =
               </button>
             </div>
             <p v-if="isLocalImage" class="mt-1.5 text-xs text-emerald-600">✓ 已加载本地图片</p>
-            <input
-              ref="fileInputRef"
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="handleFileChange"
-            />
+            <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleFileChange" />
           </div>
 
           <!-- 行列设置 -->
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
               <span class="mb-1.5 block text-xs font-medium text-slate-600">行</span>
-              <input
-                v-model.number="characterConfig.rows"
-                :class="inputClass"
-                min="1"
-                type="number"
-              />
+              <input v-model.number="characterConfig.rows" :class="inputClass" min="1" type="number" />
             </label>
             <label class="block">
               <span class="mb-1.5 block text-xs font-medium text-slate-600">列</span>
-              <input
-                v-model.number="characterConfig.cols"
-                :class="inputClass"
-                min="1"
-                type="number"
-              />
+              <input v-model.number="characterConfig.cols" :class="inputClass" min="1" type="number" />
             </label>
           </div>
 
@@ -271,9 +250,7 @@ const inputClass =
               type="number"
               :placeholder="`默认: ${characterConfig.rows * characterConfig.cols}`"
             />
-            <span class="mt-1 block text-xs text-slate-400"
-              >用于指定实际使用的帧数，当图片未铺满时使用</span
-            >
+            <span class="mt-1 block text-xs text-slate-400">用于指定实际使用的帧数，当图片未铺满时使用</span>
           </label>
 
           <!-- 缩放比例 -->
@@ -288,9 +265,7 @@ const inputClass =
               type="number"
               placeholder="默认: 1"
             />
-            <span class="mt-1 block text-xs text-slate-400"
-              >战斗场景中的显示缩放，建议 0.5 - 3.0</span
-            >
+            <span class="mt-1 block text-xs text-slate-400">战斗场景中的显示缩放，建议 0.5 - 3.0</span>
           </label>
 
           <!-- 刷新预览和保存按钮 -->
