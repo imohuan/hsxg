@@ -4,6 +4,7 @@
  */
 
 import type { BattleUnit, UnitPosition } from "@/types";
+import { UNIT_SIZE, LAYOUT } from "../config";
 
 /** 布局配置 */
 export interface StaggeredLayoutConfig {
@@ -21,8 +22,8 @@ export interface StaggeredLayoutConfig {
   rowGap?: number;
   /** 交错偏移量 */
   staggerOffset?: number;
-  /** 边距 */
-  padding?: number;
+  /** 距离中心的距离 */
+  centerOffset?: number;
 }
 
 /** 单位位置结果 */
@@ -39,13 +40,14 @@ export interface StaggeredLayoutResult {
   players: UnitLayoutResult[];
 }
 
+// 使用统一配置
 const DEFAULT_CONFIG = {
-  unitWidth: 80,
-  unitHeight: 100,
-  columnGap: 40,
-  rowGap: 30,
-  staggerOffset: 40,
-  padding: 60,
+  unitWidth: UNIT_SIZE.width,
+  unitHeight: UNIT_SIZE.height,
+  columnGap: LAYOUT.columnGap,
+  rowGap: LAYOUT.rowGap,
+  staggerOffset: LAYOUT.staggerOffset,
+  centerOffset: LAYOUT.centerOffset,
 };
 
 /**
@@ -59,16 +61,19 @@ function calculateSidePositions(
   isLeftSide: boolean,
   config: Required<StaggeredLayoutConfig>,
 ): UnitLayoutResult[] {
-  const { canvasWidth, canvasHeight, unitWidth, unitHeight, columnGap, rowGap, staggerOffset, padding } = config;
+  const { canvasWidth, canvasHeight, unitWidth, unitHeight, columnGap, rowGap, staggerOffset, centerOffset } = config;
 
   const results: UnitLayoutResult[] = [];
-  const maxRows = 3; // 每列最多 3 个单位（6 个角色 = 3 行 x 2 列）
-  const cols = 2; // 每侧 2 列
+  const maxRows = LAYOUT.maxRowsPerColumn;
+  const cols = LAYOUT.columnsPerSide;
 
-  // 计算区域起始 X 坐标
-  // 左侧（敌方）：从左边距开始
-  // 右侧（我方）：从右边距开始
-  const startX = isLeftSide ? padding + unitWidth / 2 : canvasWidth - padding - unitWidth / 2;
+  // 计算画布中心点
+  const centerX = canvasWidth / 2;
+
+  // 计算区域起始 X 坐标（从中心点向两侧偏移）
+  // 左侧（敌方）：中心点 - centerOffset
+  // 右侧（我方）：中心点 + centerOffset
+  const startX = isLeftSide ? centerX - centerOffset - unitWidth / 2 : centerX + centerOffset + unitWidth / 2;
 
   // 计算垂直居中的起始 Y
   const totalRows = Math.min(Math.ceil(units.length / cols), maxRows);

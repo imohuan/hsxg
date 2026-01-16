@@ -6,6 +6,7 @@
 
 import { ref, computed, type Ref, type ComputedRef } from "vue";
 import type { CameraState, EasingType, UnitPosition } from "@/types";
+import { CAMERA } from "../config";
 
 /** 缓动函数类型 */
 type EasingFunction = (t: number) => number;
@@ -59,8 +60,8 @@ interface CameraAnimationTask {
 }
 
 const DEFAULT_CONFIG = {
-  minZoom: 0.5,
-  maxZoom: 2.5,
+  minZoom: CAMERA.minZoom,
+  maxZoom: CAMERA.maxZoom,
   enableTransform: true,
 };
 
@@ -68,7 +69,7 @@ const DEFAULT_CONFIG = {
  * 限制缩放范围
  * Requirements: 6.3
  */
-export function clampZoom(zoom: number, min: number = 0.5, max: number = 2.5): number {
+export function clampZoom(zoom: number, min: number = CAMERA.minZoom, max: number = CAMERA.maxZoom): number {
   return Math.max(min, Math.min(max, zoom));
 }
 
@@ -309,7 +310,7 @@ export function useCameraController(config: CameraControllerConfig) {
    * 重置相机
    * Requirements: 6.4, 11.4
    */
-  function resetCamera(duration: number = 300): Promise<void> {
+  function resetCamera(duration: number = CAMERA.resetDuration): Promise<void> {
     return new Promise((resolve) => {
       if (duration <= 0) {
         cameraState.value = { ...initialState };

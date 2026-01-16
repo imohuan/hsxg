@@ -14,6 +14,20 @@ import type {
   CameraState,
   FloatingTextOptions,
 } from "@/types";
+import {
+  UNIT_SIZE,
+  UNIT_AREA,
+  STATUS_BAR,
+  STATUS_BAR_COLORS,
+  ACTIVE_HIGHLIGHT,
+  SELECTION_EFFECT,
+  DEFAULT_SPRITE,
+  TEXT,
+  DAMAGE_NUMBER,
+  DAMAGE_COLORS,
+  BACKGROUND,
+  OPACITY,
+} from "../config";
 
 /** 渲染器配置 */
 export interface CanvasRendererConfig {
@@ -27,9 +41,10 @@ export interface CanvasRendererConfig {
   unitHeight?: number;
 }
 
+// 使用统一配置
 const DEFAULT_CONFIG = {
-  unitWidth: 80,
-  unitHeight: 100,
+  unitWidth: UNIT_SIZE.width,
+  unitHeight: UNIT_SIZE.height,
 };
 
 /** Hook 返回类型 */
@@ -66,8 +81,8 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
   const canvasRef = ref<HTMLCanvasElement | null>(null);
   let ctx: CanvasRenderingContext2D | null = null;
 
-  // 背景状态 - Requirements: 2.1 亮色主题
-  const backgroundColor = ref("#e2e8f0"); // slate-200
+  // 背景状态
+  const backgroundColor = ref(BACKGROUND.defaultColor);
   const backgroundImage = ref<HTMLImageElement | null>(null);
 
   // 伤害数字
@@ -98,10 +113,10 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
 
   // 选中效果帧动画图片
   const selectionFrames: HTMLImageElement[] = [];
-  const selectionFrameUrls = ["/zhuan1.png", "/zhuan2.png", "/zhuan3.png", "/zhuan5.png", "/zhuan6.png"];
+  const selectionFrameUrls = SELECTION_EFFECT.frameUrls;
   let selectionFrameIndex = 0;
   let lastFrameTime = 0;
-  const FRAME_INTERVAL = 100; // 帧间隔 100ms
+  const FRAME_INTERVAL = SELECTION_EFFECT.frameInterval;
 
   // 预加载选中效果帧动画
   selectionFrameUrls.forEach((url) => {
@@ -111,6 +126,19 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     };
     img.src = url;
   });
+
+  // 默认角色雪碧图动画
+  let defaultSpriteImage: HTMLImageElement | null = null;
+  let defaultSpriteFrameIndex = 0;
+  let lastDefaultSpriteFrameTime = 0;
+  const DEFAULT_SPRITE_FRAME_INTERVAL = DEFAULT_SPRITE.frameInterval;
+
+  // 预加载默认雪碧图
+  const defaultSpriteImg = new Image();
+  defaultSpriteImg.onload = () => {
+    defaultSpriteImage = defaultSpriteImg;
+  };
+  defaultSpriteImg.src = DEFAULT_SPRITE.url;
 
   // 动画帧 ID
   let animationFrameId: number | null = null;
@@ -212,7 +240,7 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
       value,
       type,
       x,
-      y: y - 50, // 在单位上方显示
+      y: y + DAMAGE_NUMBER.offsetY,
       alpha: 1,
       offsetY: 0,
       createdAt: Date.now(),
@@ -220,7 +248,7 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     damageNumbers.value.push(damageNumber);
 
     // 动画：向上飘动并淡出
-    const duration = 1000;
+    const duration = DAMAGE_NUMBER.duration;
     const startTime = performance.now();
 
     function animate() {
@@ -228,7 +256,7 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
       const progress = elapsed / duration;
 
       if (progress < 1) {
-        damageNumber.offsetY = -30 * progress;
+        damageNumber.offsetY = -DAMAGE_NUMBER.floatDistance * progress;
         damageNumber.alpha = 1 - progress;
         requestAnimationFrame(animate);
       } else {
@@ -305,30 +333,37 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     const { x, y } = state.position;
     const { unitWidth, unitHeight } = fullConfig;
 
-    // 单位容器区域划分（参考参考项目）
-    const nameAreaHeight = 20; // 名称区域高度
-    const barAreaHeight = 24; // 血条区域高度
-    const spriteAreaHeight = unitHeight - nameAreaHeight - barAreaHeight; // 精灵区域高度
+    // 单位容器区域划分
+    const nameAreaHeight = UNIT_AREA.nameHeight;
+    const barAreaHeight = UNIT_AREA.barHeight;
+    const spriteAreaHeight = unitHeight - nameAreaHeight - barAreaHeight;
 
     ctx.save();
 
-    // Requirements: 7.4 - 角色不可选择时降低透明度
+    // 角色不可选择时降低透明度
     if (unit.selectable === false || unit.isDead) {
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha = OPACITY.disabled;
     }
 
     // 绘制高亮效果（当前行动角色）- 黄色椭圆光圈在精灵下方
     if (state.isActive) {
-      const auraY = y + spriteAreaHeight / 2 - 5;
+      const auraY = y + spriteAreaHeight / 2 + ACTIVE_HIGHLIGHT.offsetY;
       ctx.beginPath();
-      ctx.ellipse(x, auraY, unitWidth / 2 + 8, 10, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = "#fbbf24"; // amber-400
-      ctx.lineWidth = 3;
+      ctx.ellipse(
+        x,
+        auraY,
+        unitWidth / 2 + ACTIVE_HIGHLIGHT.ellipseWidthExtend,
+        ACTIVE_HIGHLIGHT.ellipseHeight,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.strokeStyle = ACTIVE_HIGHLIGHT.strokeColor;
+      ctx.lineWidth = ACTIVE_HIGHLIGHT.lineWidth;
       ctx.stroke();
     }
 
     // 绘制选中效果（施法目标）- 帧动画箭头
-    // 我方角色在右侧，光标显示在左侧；敌方角色在左侧，光标显示在右侧
     if (state.isSelected && selectionFrames.length > 0) {
       // 更新帧动画索引
       const now = performance.now();
@@ -339,9 +374,9 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
 
       const frame = selectionFrames[selectionFrameIndex];
       if (frame) {
-        const arrowSize = 14;
-        const offsetX = unitWidth / 2 + 10; // 箭头距离单位中心的水平距离
-        const arrowY = y; // 箭头垂直位置（单位中间偏上）
+        const arrowSize = SELECTION_EFFECT.arrowSize;
+        const offsetX = unitWidth / 2 + SELECTION_EFFECT.offsetX;
+        const arrowY = y + SELECTION_EFFECT.offsetY;
 
         ctx.save();
         if (unit.isPlayer) {
@@ -361,54 +396,44 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     // 绘制单位精灵区域
     const spriteY = y - unitHeight / 2 + nameAreaHeight + spriteAreaHeight / 2;
 
-    if (!unit.sprite || !spriteCache.has(unit.sprite.url)) {
-      // 绘制默认占位角色（圆角矩形 + 简单人形图标）
-      const placeholderWidth = unitWidth * 0.7;
-      const placeholderHeight = spriteAreaHeight * 0.8;
-      const px = x - placeholderWidth / 2;
-      const py = spriteY - placeholderHeight / 2;
-      const radius = 8;
+    // 确定要使用的精灵图
+    let spriteToUse: { url: string; rows: number; cols: number; scale?: number } | null = null;
+    let imgToUse: HTMLImageElement | null = null;
 
-      // 背景圆角矩形
-      ctx.beginPath();
-      ctx.roundRect(px, py, placeholderWidth, placeholderHeight, radius);
-      ctx.fillStyle = unit.isDead ? "#94a3b8" : unit.isPlayer ? "#3b82f6" : "#ef4444";
-      ctx.fill();
-      ctx.strokeStyle = unit.isDead ? "#64748b" : unit.isPlayer ? "#1d4ed8" : "#b91c1c";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+    if (unit.sprite && spriteCache.has(unit.sprite.url)) {
+      // 使用单位自定义精灵图
+      spriteToUse = unit.sprite;
+      imgToUse = spriteCache.get(unit.sprite.url)!;
+    } else if (defaultSpriteImage) {
+      // 使用默认精灵图
+      spriteToUse = {
+        url: DEFAULT_SPRITE.url,
+        rows: DEFAULT_SPRITE.rows,
+        cols: DEFAULT_SPRITE.cols,
+        scale: DEFAULT_SPRITE.scale,
+      };
+      imgToUse = defaultSpriteImage;
+    }
 
-      // 绘制简单人形图标
-      const iconSize = Math.min(placeholderWidth, placeholderHeight) * 0.5;
-      const iconX = x;
-      const iconY = spriteY - iconSize * 0.1;
+    if (spriteToUse && imgToUse) {
+      // 更新默认精灵图帧动画索引
+      const now = performance.now();
+      if (now - lastDefaultSpriteFrameTime > DEFAULT_SPRITE_FRAME_INTERVAL) {
+        defaultSpriteFrameIndex = (defaultSpriteFrameIndex + 1) % DEFAULT_SPRITE.totalFrames;
+        lastDefaultSpriteFrameTime = now;
+      }
 
-      // 头部（圆形）
-      ctx.beginPath();
-      ctx.arc(iconX, iconY - iconSize * 0.35, iconSize * 0.25, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
+      const { rows, cols, scale = 1 } = spriteToUse;
+      const frameWidth = imgToUse.width / cols;
+      const frameHeight = imgToUse.height / rows;
 
-      // 身体（三角形）
-      ctx.beginPath();
-      ctx.moveTo(iconX, iconY - iconSize * 0.1);
-      ctx.lineTo(iconX - iconSize * 0.3, iconY + iconSize * 0.4);
-      ctx.lineTo(iconX + iconSize * 0.3, iconY + iconSize * 0.4);
-      ctx.closePath();
-      ctx.fill();
-
-      // 绘制名称（在精灵上方）
-      ctx.fillStyle = "#1e293b";
-      ctx.font = "bold 11px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(unit.name, x, y - unitHeight / 2 + nameAreaHeight / 2);
-    } else {
-      // 绘制精灵图
-      const img = spriteCache.get(unit.sprite.url)!;
-      const { rows, cols, scale = 1 } = unit.sprite;
-      const frameWidth = img.width / cols;
-      const frameHeight = img.height / rows;
+      // 计算当前帧的位置（使用默认精灵图时使用动画帧索引）
+      const isDefaultSprite = spriteToUse.url === DEFAULT_SPRITE.url;
+      const frameIndex = isDefaultSprite ? defaultSpriteFrameIndex : 0;
+      const frameCol = frameIndex % cols;
+      const frameRow = Math.floor(frameIndex / cols);
+      const sourceX = frameCol * frameWidth;
+      const sourceY = frameRow * frameHeight;
 
       // 计算适配容器的缩放
       const fitScaleX = (unitWidth * 0.9) / frameWidth;
@@ -423,13 +448,23 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
         ctx.save();
         ctx.translate(x, spriteY);
         ctx.scale(-1, 1);
-        ctx.drawImage(img, 0, 0, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        ctx.drawImage(
+          imgToUse,
+          sourceX,
+          sourceY,
+          frameWidth,
+          frameHeight,
+          -drawWidth / 2,
+          -drawHeight / 2,
+          drawWidth,
+          drawHeight,
+        );
         ctx.restore();
       } else {
         ctx.drawImage(
-          img,
-          0,
-          0,
+          imgToUse,
+          sourceX,
+          sourceY,
           frameWidth,
           frameHeight,
           x - drawWidth / 2,
@@ -438,45 +473,45 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
           drawHeight,
         );
       }
-
-      // 绘制名称
-      ctx.fillStyle = "#1e293b";
-      ctx.font = "bold 11px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(unit.name, x, y - unitHeight / 2 + nameAreaHeight / 2);
     }
+
+    // 绘制名称
+    ctx.fillStyle = TEXT.nameColor;
+    ctx.font = TEXT.nameFont;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(unit.name, x, y - unitHeight / 2 + nameAreaHeight / 2);
 
     ctx.restore();
   }
 
-  /** 绘制单位信息栏（速度序号、血量、蓝量）- Requirements: 2.5 */
+  /** 绘制单位信息栏（速度序号、血量、蓝量） */
   function drawUnitInfo(unit: BattleUnit, state: UnitRuntimeState, speedOrder: number) {
     if (!ctx) return;
 
     const { x, y } = state.position;
     const { unitWidth, unitHeight } = fullConfig;
 
-    // 血条区域配置（参考参考项目的交错设计）
-    const barWidth = unitWidth * 0.85;
-    const barHeight = 7;
-    const barGap = 2;
-    const barPadding = 1;
-    const mpBarOffsetX = -8; // 蓝条 X 偏移（交错效果）
+    // 血条区域配置
+    const barWidth = unitWidth * STATUS_BAR.widthRatio;
+    const barHeight = STATUS_BAR.height;
+    const barGap = STATUS_BAR.gap;
+    const barPadding = STATUS_BAR.padding;
+    const mpBarOffsetX = STATUS_BAR.mpOffsetX;
 
     // 血条区域起始位置（在单位底部）
-    const barAreaY = y + unitHeight / 2 - 20;
+    const barAreaY = y + unitHeight / 2 - STATUS_BAR.bottomOffset;
 
     // 速度序号（在血条左侧）
     ctx.save();
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 2;
-    ctx.font = "bold 12px sans-serif";
+    ctx.fillStyle = TEXT.speedOrderColor;
+    ctx.strokeStyle = TEXT.speedOrderStrokeColor;
+    ctx.lineWidth = TEXT.speedOrderStrokeWidth;
+    ctx.font = TEXT.speedOrderFont;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    const orderX = x - barWidth / 2 - 12;
+    const orderX = x - barWidth / 2 - TEXT.speedOrderOffsetX;
     const orderY = barAreaY;
 
     // 先绘制描边
@@ -490,11 +525,11 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     const hpBarY = barAreaY - barGap;
 
     // 血条背景（白色边框效果）
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = STATUS_BAR_COLORS.hpBackground;
     ctx.fillRect(hpBarX - barWidth / 2, hpBarY - barHeight / 2, barWidth, barHeight);
 
     // 血条内部背景（黑色）
-    ctx.fillStyle = "#1e293b";
+    ctx.fillStyle = STATUS_BAR_COLORS.hpInnerBackground;
     ctx.fillRect(
       hpBarX - barWidth / 2 + barPadding,
       hpBarY - barHeight / 2 + barPadding,
@@ -505,7 +540,7 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     // 血条填充
     const hpRatio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
     if (hpRatio > 0) {
-      ctx.fillStyle = hpRatio > 0.3 ? "#ef4444" : "#dc2626";
+      ctx.fillStyle = hpRatio > 0.3 ? STATUS_BAR_COLORS.hpFill : STATUS_BAR_COLORS.hpFillLow;
       ctx.fillRect(
         hpBarX - barWidth / 2 + barPadding,
         hpBarY - barHeight / 2 + barPadding,
@@ -519,11 +554,11 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     const mpBarY = barAreaY + barHeight + barGap;
 
     // 蓝条背景
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = STATUS_BAR_COLORS.mpBackground;
     ctx.fillRect(mpBarX - barWidth / 2, mpBarY - barHeight / 2, barWidth, barHeight);
 
     // 蓝条内部背景
-    ctx.fillStyle = "#1e293b";
+    ctx.fillStyle = STATUS_BAR_COLORS.mpInnerBackground;
     ctx.fillRect(
       mpBarX - barWidth / 2 + barPadding,
       mpBarY - barHeight / 2 + barPadding,
@@ -534,7 +569,7 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     // 蓝条填充
     const mpRatio = unit.maxMp > 0 ? Math.max(0, Math.min(1, unit.mp / unit.maxMp)) : 0;
     if (mpRatio > 0) {
-      ctx.fillStyle = "#3b82f6";
+      ctx.fillStyle = STATUS_BAR_COLORS.mpFill;
       ctx.fillRect(
         mpBarX - barWidth / 2 + barPadding,
         mpBarY - barHeight / 2 + barPadding,
@@ -555,20 +590,20 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
       // 根据类型设置颜色
       switch (damage.type) {
         case "damage":
-          ctx!.fillStyle = "#ff4444";
+          ctx!.fillStyle = DAMAGE_COLORS.damage;
           break;
         case "heal":
-          ctx!.fillStyle = "#44ff44";
+          ctx!.fillStyle = DAMAGE_COLORS.heal;
           break;
         case "critical":
-          ctx!.fillStyle = "#ffaa00";
+          ctx!.fillStyle = DAMAGE_COLORS.critical;
           break;
         case "miss":
-          ctx!.fillStyle = "#aaaaaa";
+          ctx!.fillStyle = DAMAGE_COLORS.miss;
           break;
       }
 
-      ctx!.font = damage.type === "critical" ? "bold 24px sans-serif" : "bold 18px sans-serif";
+      ctx!.font = damage.type === "critical" ? DAMAGE_NUMBER.criticalFont : DAMAGE_NUMBER.normalFont;
       ctx!.textAlign = "center";
 
       const text = damage.type === "miss" ? "MISS" : `${damage.value > 0 ? "-" : "+"}${Math.abs(damage.value)}`;

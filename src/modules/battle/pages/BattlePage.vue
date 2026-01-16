@@ -12,6 +12,14 @@ import DiamondMenu from "../components/DiamondMenu.vue";
 import UnitInfoPopup from "../components/UnitInfoPopup.vue";
 import TargetInfoPanel from "../components/TargetInfoPanel.vue";
 import type { ActionType, UnitConfig, GameData, BattleUnit, BattlePhase, Point } from "@/types";
+import {
+  ACTION_TARGET_RULES,
+  filterSelectableUnits,
+  getDefaultTarget,
+  needsTargetSelection,
+  getTargetSelectionHint,
+  type TargetSelectionRule,
+} from "@/components/gamecanvas/config";
 
 // ============ 状态 ============
 
@@ -29,6 +37,9 @@ const result = ref<"win" | "lose" | "escape" | null>(null);
 // 目标选择状态
 type SelectionMode = "none" | "attack" | "skill" | "item";
 const selectionMode = ref<SelectionMode>("none");
+const currentTargetRule = ref<TargetSelectionRule | null>(null);
+const selectableUnits = ref<BattleUnit[]>([]);
+const selectionHint = ref("");
 
 // 单位数据
 const playerUnits = ref<UnitConfig[]>([]);
@@ -153,32 +164,58 @@ function getAlivePlayers(): BattleUnit[] {
   return playerUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, true));
 }
 
+/** 获取所有单位 */
+function getAllUnits(): BattleUnit[] {
+  return [...getAliveEnemies(), ...getAlivePlayers()];
+}
+
+/** 获取当前行动者 */
+function getCurrentActor(): UnitConfig | null {
+  return playerUnits.value[currentActorIndex.value] || null;
+}
+
 /** 进入目标选择模式 */
-function enterSelectionMode(mode: SelectionMode): void {
-  selectionMode.value = mode;
+function enterSelectionMode(mode: SelectionMode, customRule?: TargetSelectionRule): void {
+  const actor = getCurrentActor();
+  if (!actor) return;
 
-  // 根据模式选择默认目标
-  let defaultTarget: BattleUnit | null = null;
+  // 获取目标规则
+  const rule = customRule || ACTION_TARGET_RULES[mode as ActionType];
+  if (!rule) return;
 
-  if (mode === "attack") {
-    // 攻击默认选中敌方第一个存活单位
-    const enemies = getAliveEnemies();
-    defaultTarget = enemies[0] || null;
-  } else if (mode === "skill" || mode === "item") {
-    // 技能/物品可能需要选择友方或敌方，默认选敌方
-    const enemies = getAliveEnemies();
-    defaultTarget = enemies[0] || null;
+  // 检查是否需要选择目标
+  if (!needsTargetSelection(rule)) {
+    // 不需要选择目标，直接执行
+    handleAction(mode as ActionType);
+    return;
   }
+
+  selectionMode.value = mode;
+  currentTargetRule.value = rule;
+  selectionHint.value = getTargetSelectionHint(rule);
+
+  // 过滤可选单位
+  const allUnits = getAllUnits();
+  selectableUnits.value = filterSelectableUnits(allUnits, rule, actor.id, actor.isPlayer);
+
+  // 获取默认目标
+  const defaultTarget = getDefaultTarget(selectableUnits.value, rule, actor.isPlayer);
 
   if (defaultTarget) {
     selectedTarget.value = defaultTarget;
     canvasRef.value?.setUnitSelected(defaultTarget.id);
+  } else {
+    // 没有可选目标，退出选择模式
+    exitSelectionMode();
   }
 }
 
 /** 退出目标选择模式 */
 function exitSelectionMode(): void {
   selectionMode.value = "none";
+  currentTargetRule.value = null;
+  selectableUnits.value = [];
+  selectionHint.value = "";
   selectedTarget.value = null;
   canvasRef.value?.setUnitSelected(null);
 }
@@ -199,6 +236,13 @@ function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
 
   // 只有在选择目标模式下才处理点击
   if (selectionMode.value !== "none") {
+    // 检查点击的单位是否在可选列表中
+    const isSelectable = selectableUnits.value.some((u) => u.id === payload.unit.id);
+    if (!isSelectable) {
+      console.log("[BattlePage] 该单位不可选择");
+      return;
+    }
+
     const now = Date.now();
     const isDoubleClick = lastClickUnitId === payload.unit.id && now - lastClickTime < 300;
 
