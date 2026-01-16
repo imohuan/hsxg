@@ -62,7 +62,7 @@ function calculateSidePositions(
   const { canvasWidth, canvasHeight, unitWidth, unitHeight, columnGap, rowGap, staggerOffset, padding } = config;
 
   const results: UnitLayoutResult[] = [];
-  const maxRows = 4; // 每列最多 4 个单位
+  const maxRows = 3; // 每列最多 3 个单位（6 个角色 = 3 行 x 2 列）
   const cols = 2; // 每侧 2 列
 
   // 计算区域起始 X 坐标
@@ -76,18 +76,19 @@ function calculateSidePositions(
   const startY = (canvasHeight - totalHeight) / 2 + unitHeight / 2;
 
   units.forEach((unit, index) => {
-    if (index >= maxRows * cols) return; // 超出容量限制
+    if (index >= maxRows * cols) return; // 超出容量限制（最多 6 个）
 
-    const row = index % maxRows;
+    // 按列优先排列：先填满第一列，再填第二列
     const col = Math.floor(index / maxRows);
+    const row = index % maxRows;
 
     // X 坐标：左侧向右排列，右侧向左排列
     const colOffset = col * (unitWidth + columnGap);
     const x = isLeftSide ? startX + colOffset : startX - colOffset;
 
-    // Y 坐标：基础位置 + 交错偏移（奇数列向下偏移）
+    // Y 坐标：基础位置 + 交错偏移（第二列向下偏移）
     const baseY = startY + row * (unitHeight + rowGap);
-    const y = col % 2 === 1 ? baseY + staggerOffset : baseY;
+    const y = col === 1 ? baseY + staggerOffset : baseY;
 
     results.push({
       unitId: unit.id,

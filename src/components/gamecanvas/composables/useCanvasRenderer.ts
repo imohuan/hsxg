@@ -289,6 +289,11 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
     const { x, y } = state.position;
     const { unitWidth, unitHeight } = fullConfig;
 
+    // 单位容器区域划分（参考参考项目）
+    const nameAreaHeight = 20; // 名称区域高度
+    const barAreaHeight = 24; // 血条区域高度
+    const spriteAreaHeight = unitHeight - nameAreaHeight - barAreaHeight; // 精灵区域高度
+
     ctx.save();
 
     // Requirements: 7.4 - 角色不可选择时降低透明度
@@ -296,55 +301,120 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
       ctx.globalAlpha = 0.5;
     }
 
-    // 绘制高亮效果
+    // 绘制高亮效果（当前行动角色）
     if (state.isActive) {
-      // Requirements: 7.1 - 当前行动角色黄色光圈
-      // 先绘制光圈
+      // Requirements: 7.1 - 当前行动角色黄色光圈（在精灵下方）
+      const auraY = y + spriteAreaHeight / 2 - 5;
       ctx.beginPath();
-      ctx.ellipse(x, y + unitHeight / 2 + 5, unitWidth / 2 + 10, 15, 0, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255, 215, 0, 0.4)";
+      ctx.ellipse(x, auraY, unitWidth / 2 + 5, 12, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255, 215, 0, 0.35)";
       ctx.fill();
       ctx.strokeStyle = "#ffd700";
       ctx.lineWidth = 2;
       ctx.stroke();
     }
 
+    // 绘制选中效果
     if (state.isSelected) {
       // Requirements: 7.2 - 目标角色红色边框
-      ctx.strokeStyle = "#ff4444";
+      ctx.strokeStyle = "#ef4444";
       ctx.lineWidth = 3;
-      ctx.strokeRect(x - unitWidth / 2 - 5, y - unitHeight / 2 - 5, unitWidth + 10, unitHeight + 10);
+      const padding = 4;
+      ctx.strokeRect(
+        x - unitWidth / 2 - padding,
+        y - unitHeight / 2 - padding,
+        unitWidth + padding * 2,
+        unitHeight + padding * 2,
+      );
     }
 
-    // 绘制单位占位（如果没有精灵图）- Requirements: 1.4, 2.5
-    if (!unit.sprite) {
-      // 亮色主题下使用深色占位图
-      ctx.fillStyle = unit.isDead ? "#94a3b8" : "#64748b"; // slate-400 / slate-500
-      ctx.fillRect(x - unitWidth / 2, y - unitHeight / 2, unitWidth, unitHeight);
+    // 绘制单位精灵区域
+    const spriteY = y - unitHeight / 2 + nameAreaHeight + spriteAreaHeight / 2;
 
-      // 绘制圆角边框
-      ctx.strokeStyle = "#475569"; // slate-600
+    if (!unit.sprite || !spriteCache.has(unit.sprite.url)) {
+      // 绘制默认占位角色（圆角矩形 + 简单人形图标）
+      const placeholderWidth = unitWidth * 0.7;
+      const placeholderHeight = spriteAreaHeight * 0.8;
+      const px = x - placeholderWidth / 2;
+      const py = spriteY - placeholderHeight / 2;
+      const radius = 8;
+
+      // 背景圆角矩形
+      ctx.beginPath();
+      ctx.roundRect(px, py, placeholderWidth, placeholderHeight, radius);
+      ctx.fillStyle = unit.isDead ? "#94a3b8" : unit.isPlayer ? "#3b82f6" : "#ef4444";
+      ctx.fill();
+      ctx.strokeStyle = unit.isDead ? "#64748b" : unit.isPlayer ? "#1d4ed8" : "#b91c1c";
       ctx.lineWidth = 2;
-      ctx.strokeRect(x - unitWidth / 2, y - unitHeight / 2, unitWidth, unitHeight);
+      ctx.stroke();
 
-      // 绘制名称
-      ctx.fillStyle = "#fff";
-      ctx.font = "12px sans-serif";
+      // 绘制简单人形图标
+      const iconSize = Math.min(placeholderWidth, placeholderHeight) * 0.5;
+      const iconX = x;
+      const iconY = spriteY - iconSize * 0.1;
+
+      // 头部（圆形）
+      ctx.beginPath();
+      ctx.arc(iconX, iconY - iconSize * 0.35, iconSize * 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      // 身体（三角形）
+      ctx.beginPath();
+      ctx.moveTo(iconX, iconY - iconSize * 0.1);
+      ctx.lineTo(iconX - iconSize * 0.3, iconY + iconSize * 0.4);
+      ctx.lineTo(iconX + iconSize * 0.3, iconY + iconSize * 0.4);
+      ctx.closePath();
+      ctx.fill();
+
+      // 绘制名称（在精灵上方）
+      ctx.fillStyle = "#1e293b";
+      ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(unit.name, x, y);
+      ctx.textBaseline = "middle";
+      ctx.fillText(unit.name, x, y - unitHeight / 2 + nameAreaHeight / 2);
     } else {
       // 绘制精灵图
-      const img = spriteCache.get(unit.sprite.url);
-      if (img) {
-        const { rows, cols, scale = 1 } = unit.sprite;
-        const frameWidth = img.width / cols;
-        const frameHeight = img.height / rows;
-        const drawWidth = frameWidth * scale;
-        const drawHeight = frameHeight * scale;
+      const img = spriteCache.get(unit.sprite.url)!;
+      const { rows, cols, scale = 1 } = unit.sprite;
+      const frameWidth = img.width / cols;
+      const frameHeight = img.height / rows;
 
-        // 默认显示第一帧
-        ctx.drawImage(img, 0, 0, frameWidth, frameHeight, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+      // 计算适配容器的缩放
+      const fitScaleX = (unitWidth * 0.9) / frameWidth;
+      const fitScaleY = (spriteAreaHeight * 0.9) / frameHeight;
+      const fitScale = Math.min(fitScaleX, fitScaleY) * scale;
+
+      const drawWidth = frameWidth * fitScale;
+      const drawHeight = frameHeight * fitScale;
+
+      // 敌方角色需要水平翻转
+      if (!unit.isPlayer) {
+        ctx.save();
+        ctx.translate(x, spriteY);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, 0, 0, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        ctx.restore();
+      } else {
+        ctx.drawImage(
+          img,
+          0,
+          0,
+          frameWidth,
+          frameHeight,
+          x - drawWidth / 2,
+          spriteY - drawHeight / 2,
+          drawWidth,
+          drawHeight,
+        );
       }
+
+      // 绘制名称
+      ctx.fillStyle = "#1e293b";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(unit.name, x, y - unitHeight / 2 + nameAreaHeight / 2);
     }
 
     ctx.restore();
@@ -356,36 +426,92 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
 
     const { x, y } = state.position;
     const { unitWidth, unitHeight } = fullConfig;
-    const barWidth = unitWidth;
-    const barHeight = 6;
-    const barGap = 3;
-    const startY = y + unitHeight / 2 + 8;
 
-    // 速度序号 - 使用深色文字
-    ctx.fillStyle = "#b45309"; // amber-700
-    ctx.font = "bold 14px sans-serif";
+    // 血条区域配置（参考参考项目的交错设计）
+    const barWidth = unitWidth * 0.85;
+    const barHeight = 7;
+    const barGap = 2;
+    const barPadding = 1;
+    const mpBarOffsetX = -8; // 蓝条 X 偏移（交错效果）
+
+    // 血条区域起始位置（在单位底部）
+    const barAreaY = y + unitHeight / 2 - 20;
+
+    // 速度序号（在血条左侧）
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.font = "bold 12px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`${speedOrder}`, x, startY);
+    ctx.textBaseline = "middle";
 
-    // 血量条背景 - 使用浅色背景
-    const hpBarY = startY + 12;
-    ctx.fillStyle = "#cbd5e1"; // slate-300
-    ctx.fillRect(x - barWidth / 2, hpBarY, barWidth, barHeight);
+    const orderX = x - barWidth / 2 - 12;
+    const orderY = barAreaY;
 
-    // 血量条 - Requirements: 2.5
-    const hpRatio = unit.hp / unit.maxHp;
-    ctx.fillStyle = hpRatio > 0.3 ? "#ef4444" : "#dc2626"; // red-500 / red-600
-    ctx.fillRect(x - barWidth / 2, hpBarY, barWidth * hpRatio, barHeight);
+    // 先绘制描边
+    ctx.strokeText(`${speedOrder}`, orderX, orderY);
+    // 再绘制填充
+    ctx.fillText(`${speedOrder}`, orderX, orderY);
+    ctx.restore();
 
-    // 蓝量条背景
-    const mpBarY = hpBarY + barHeight + barGap;
-    ctx.fillStyle = "#cbd5e1"; // slate-300
-    ctx.fillRect(x - barWidth / 2, mpBarY, barWidth, barHeight);
+    // 血量条（上方）
+    const hpBarX = x;
+    const hpBarY = barAreaY - barGap;
 
-    // 蓝量条
-    const mpRatio = unit.mp / unit.maxMp;
-    ctx.fillStyle = "#3b82f6"; // blue-500
-    ctx.fillRect(x - barWidth / 2, mpBarY, barWidth * mpRatio, barHeight);
+    // 血条背景（白色边框效果）
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(hpBarX - barWidth / 2, hpBarY - barHeight / 2, barWidth, barHeight);
+
+    // 血条内部背景（黑色）
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(
+      hpBarX - barWidth / 2 + barPadding,
+      hpBarY - barHeight / 2 + barPadding,
+      barWidth - barPadding * 2,
+      barHeight - barPadding * 2,
+    );
+
+    // 血条填充
+    const hpRatio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
+    if (hpRatio > 0) {
+      ctx.fillStyle = hpRatio > 0.3 ? "#ef4444" : "#dc2626";
+      ctx.fillRect(
+        hpBarX - barWidth / 2 + barPadding,
+        hpBarY - barHeight / 2 + barPadding,
+        (barWidth - barPadding * 2) * hpRatio,
+        barHeight - barPadding * 2,
+      );
+    }
+
+    // 蓝量条（下方，X 偏移实现交错效果）
+    const mpBarX = x + mpBarOffsetX;
+    const mpBarY = barAreaY + barHeight + barGap;
+
+    // 蓝条背景
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(mpBarX - barWidth / 2, mpBarY - barHeight / 2, barWidth, barHeight);
+
+    // 蓝条内部背景
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(
+      mpBarX - barWidth / 2 + barPadding,
+      mpBarY - barHeight / 2 + barPadding,
+      barWidth - barPadding * 2,
+      barHeight - barPadding * 2,
+    );
+
+    // 蓝条填充
+    const mpRatio = unit.maxMp > 0 ? Math.max(0, Math.min(1, unit.mp / unit.maxMp)) : 0;
+    if (mpRatio > 0) {
+      ctx.fillStyle = "#3b82f6";
+      ctx.fillRect(
+        mpBarX - barWidth / 2 + barPadding,
+        mpBarY - barHeight / 2 + barPadding,
+        (barWidth - barPadding * 2) * mpRatio,
+        barHeight - barPadding * 2,
+      );
+    }
   }
 
   /** 绘制伤害数字 */

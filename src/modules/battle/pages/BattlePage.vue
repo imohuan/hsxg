@@ -5,6 +5,7 @@
  * 使用新版 slot 接口：header、overlay、unit-info
  */
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { useResizeObserver } from "@vueuse/core";
 import GameCanvas from "@/components/gamecanvas/GameCanvas.vue";
 import BattleHeader from "../components/BattleHeader.vue";
 import DiamondMenu from "../components/DiamondMenu.vue";
@@ -127,14 +128,6 @@ const actionQueueProgress = computed(() => 0);
 
 // ============ 方法 ============
 
-/** 更新画布尺寸以填满容器 */
-function updateCanvasSize(): void {
-  if (containerRef.value) {
-    canvasWidth.value = containerRef.value.clientWidth;
-    canvasHeight.value = containerRef.value.clientHeight;
-  }
-}
-
 function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
   console.log("[BattlePage] 单位被点击:", payload.unit.name, payload.position);
 }
@@ -205,14 +198,23 @@ function createDemoUnit(
 }
 
 async function startDemoBattle(): Promise<void> {
+  // 默认 6 个我方角色
   playerUnits.value = [
     createDemoUnit("player1", "勇者", true, 0, 0),
     createDemoUnit("player2", "法师", true, 1, 0),
     createDemoUnit("player3", "牧师", true, 2, 0),
+    createDemoUnit("player4", "刺客", true, 0, 1),
+    createDemoUnit("player5", "弓手", true, 1, 1),
+    createDemoUnit("player6", "骑士", true, 2, 1),
   ];
+  // 默认 6 个敌方角色
   enemyUnits.value = [
     createDemoUnit("enemy1", "哥布林", false, 0, 0),
     createDemoUnit("enemy2", "史莱姆", false, 1, 0),
+    createDemoUnit("enemy3", "骷髅兵", false, 2, 0),
+    createDemoUnit("enemy4", "蝙蝠", false, 0, 1),
+    createDemoUnit("enemy5", "狼人", false, 1, 1),
+    createDemoUnit("enemy6", "巨魔", false, 2, 1),
   ];
 
   phase.value = "command";
@@ -301,14 +303,17 @@ function goToMenu(): void {
 
 // ============ 生命周期 ============
 
-onMounted(() => {
-  updateCanvasSize();
-  window.addEventListener("resize", updateCanvasSize);
+// 监听容器 resize，自动更新画布尺寸
+useResizeObserver(containerRef, (entries) => {
+  const entry = entries[0];
+  if (entry) {
+    canvasWidth.value = entry.contentRect.width;
+    canvasHeight.value = entry.contentRect.height;
+  }
 });
 
 onUnmounted(() => {
   stopTimer();
-  window.removeEventListener("resize", updateCanvasSize);
 });
 
 watch(result, (newResult) => {
@@ -360,10 +365,10 @@ watch(result, (newResult) => {
       </template>
     </GameCanvas>
 
-    <!-- 左上角：倒计时（操作阶段显示） -->
+    <!-- 倒计时（操作阶段显示） -->
     <div
       v-if="phase === 'command'"
-      class="absolute top-14 left-4 z-20 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm"
+      class="absolute bottom-0 right-0 m-2 z-20 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm"
     >
       <div class="flex items-center gap-2">
         <span class="text-sm text-gray-600">剩余时间</span>

@@ -33,7 +33,7 @@ const props = withDefaults(
     disabled: false,
     disabledItems: () => [],
     itemSize: 56,
-    gap: 10, // 默认 10px，确保按钮间距足够
+    gap: 20, // 增大间距，避免按钮太近
   },
 );
 
