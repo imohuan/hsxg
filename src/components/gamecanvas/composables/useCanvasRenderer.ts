@@ -96,6 +96,22 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
   // 精灵图缓存
   const spriteCache = new Map<string, HTMLImageElement>();
 
+  // 选中效果帧动画图片
+  const selectionFrames: HTMLImageElement[] = [];
+  const selectionFrameUrls = ["/zhuan1.png", "/zhuan2.png", "/zhuan3.png", "/zhuan5.png", "/zhuan6.png"];
+  let selectionFrameIndex = 0;
+  let lastFrameTime = 0;
+  const FRAME_INTERVAL = 100; // 帧间隔 100ms
+
+  // 预加载选中效果帧动画
+  selectionFrameUrls.forEach((url) => {
+    const img = new Image();
+    img.onload = () => {
+      selectionFrames.push(img);
+    };
+    img.src = url;
+  });
+
   // 动画帧 ID
   let animationFrameId: number | null = null;
 
@@ -301,31 +317,45 @@ export function useCanvasRenderer(config: CanvasRendererConfig): UseCanvasRender
       ctx.globalAlpha = 0.5;
     }
 
-    // 绘制高亮效果（当前行动角色）
+    // 绘制高亮效果（当前行动角色）- 黄色椭圆光圈在精灵下方
     if (state.isActive) {
-      // Requirements: 7.1 - 当前行动角色黄色光圈（在精灵下方）
       const auraY = y + spriteAreaHeight / 2 - 5;
       ctx.beginPath();
-      ctx.ellipse(x, auraY, unitWidth / 2 + 5, 12, 0, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255, 215, 0, 0.35)";
-      ctx.fill();
-      ctx.strokeStyle = "#ffd700";
-      ctx.lineWidth = 2;
+      ctx.ellipse(x, auraY, unitWidth / 2 + 8, 10, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = "#fbbf24"; // amber-400
+      ctx.lineWidth = 3;
       ctx.stroke();
     }
 
-    // 绘制选中效果
-    if (state.isSelected) {
-      // Requirements: 7.2 - 目标角色红色边框
-      ctx.strokeStyle = "#ef4444";
-      ctx.lineWidth = 3;
-      const padding = 4;
-      ctx.strokeRect(
-        x - unitWidth / 2 - padding,
-        y - unitHeight / 2 - padding,
-        unitWidth + padding * 2,
-        unitHeight + padding * 2,
-      );
+    // 绘制选中效果（施法目标）- 帧动画箭头
+    // 我方角色在右侧，光标显示在左侧；敌方角色在左侧，光标显示在右侧
+    if (state.isSelected && selectionFrames.length > 0) {
+      // 更新帧动画索引
+      const now = performance.now();
+      if (now - lastFrameTime > FRAME_INTERVAL) {
+        selectionFrameIndex = (selectionFrameIndex + 1) % selectionFrames.length;
+        lastFrameTime = now;
+      }
+
+      const frame = selectionFrames[selectionFrameIndex];
+      if (frame) {
+        const arrowSize = 14;
+        const offsetX = unitWidth / 2 + 10; // 箭头距离单位中心的水平距离
+        const arrowY = y; // 箭头垂直位置（单位中间偏上）
+
+        ctx.save();
+        if (unit.isPlayer) {
+          // 我方角色在右侧，光标显示在左侧（指向右）
+          ctx.translate(x - offsetX, arrowY);
+          ctx.drawImage(frame, -arrowSize / 2, -arrowSize / 2, arrowSize, arrowSize);
+        } else {
+          // 敌方角色在左侧，光标显示在右侧（水平翻转，指向左）
+          ctx.translate(x + offsetX, arrowY);
+          ctx.scale(-1, 1);
+          ctx.drawImage(frame, -arrowSize / 2, -arrowSize / 2, arrowSize, arrowSize);
+        }
+        ctx.restore();
+      }
     }
 
     // 绘制单位精灵区域

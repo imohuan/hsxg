@@ -98,6 +98,9 @@ export function useUnitManager(config: UnitManagerConfig) {
    * 初始化单位
    */
   function initUnits(sceneConfig: BattleSceneConfig): void {
+    // 保存配置用于 resize 时重新计算
+    lastSceneConfig = sceneConfig;
+
     unitStates.value.clear();
     unitsData.value.clear();
     frameIndices.value.clear();
@@ -455,12 +458,55 @@ export function useUnitManager(config: UnitManagerConfig) {
     frameIndices.value.clear();
   }
 
+  /** 保存当前场景配置，用于 resize 时重新计算位置 */
+  let lastSceneConfig: BattleSceneConfig | null = null;
+
   /**
-   * 调整尺寸
+   * 调整尺寸并重新计算单位位置
    */
   function resize(width: number, height: number): void {
+    // 尺寸没变化则跳过
+    if (width === currentWidth && height === currentHeight) return;
+
     currentWidth = width;
     currentHeight = height;
+
+    // 重新计算所有单位位置
+    if (lastSceneConfig) {
+      recalculatePositions();
+    }
+  }
+
+  /**
+   * 重新计算所有单位位置（保持选中/激活状态）
+   */
+  function recalculatePositions(): void {
+    if (!lastSceneConfig) return;
+
+    const layoutConfig: StaggeredLayoutConfig = {
+      canvasWidth: currentWidth,
+      canvasHeight: currentHeight,
+    };
+
+    const layout = calculateStaggeredPositions(lastSceneConfig.enemyUnits, lastSceneConfig.playerUnits, layoutConfig);
+
+    // 更新敌方单位位置
+    for (const result of layout.enemies) {
+      const state = unitStates.value.get(result.unitId);
+      if (state) {
+        state.position = { ...result.position };
+        state.initialPosition = { ...result.position };
+      }
+    }
+
+    // 更新我方单位位置
+    for (const result of layout.players) {
+      const state = unitStates.value.get(result.unitId);
+      if (state) {
+        state.position = { ...result.position };
+        state.initialPosition = { ...result.position };
+      }
+    }
   }
 
   return {

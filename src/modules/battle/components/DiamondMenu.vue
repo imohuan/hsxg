@@ -16,6 +16,15 @@ import {
 } from "@vicons/material";
 import type { DiamondMenuItem } from "@/types";
 
+// ============ 布局配置（在此调整间距） ============
+
+/** 按钮大小（像素） */
+const ITEM_SIZE = 56;
+/** 左右间距（像素） */
+const GAP_X = 15;
+/** 上下间距（像素） */
+const GAP_Y = 40;
+
 // ============ Props & Emits ============
 
 const props = withDefaults(
@@ -24,16 +33,10 @@ const props = withDefaults(
     disabled?: boolean;
     /** 禁用的菜单项 key 列表 */
     disabledItems?: string[];
-    /** 按钮大小（像素） */
-    itemSize?: number;
-    /** 按钮间距（像素）- Requirements: 3.1 至少 8px */
-    gap?: number;
   }>(),
   {
     disabled: false,
     disabledItems: () => [],
-    itemSize: 56,
-    gap: 20, // 增大间距，避免按钮太近
   },
 );
 
@@ -135,19 +138,14 @@ function getColorConfig(key: string): ColorConfig {
  * Requirements: 3.1-3.5 - 菱形菜单布局优化
  */
 const menuItems = computed(() => {
-  const { itemSize, gap } = props;
   // 旋转后的对角线长度（按钮实际占用的宽高）
-  const diagonal = itemSize * Math.SQRT2;
+  const diagonal = ITEM_SIZE * Math.SQRT2;
 
   // 列间距：两个按钮中心之间的水平距离
-  // 确保按钮边缘之间至少有 gap 像素的间距
-  // 两个按钮边缘间距 = 中心距离 - diagonal/2 - diagonal/2 = 中心距离 - diagonal
-  // 所以中心距离 = diagonal + gap
-  const columnOffset = diagonal + gap;
+  const columnOffset = diagonal + GAP_X;
 
   // 行间距：两个按钮中心之间的垂直距离
-  // 同样确保边缘间距至少为 gap
-  const rowOffset = diagonal * 0.6 + gap;
+  const rowOffset = diagonal * 0.6 + GAP_Y;
 
   // 第二列的 Y 偏移（交错效果）
   const staggerY = rowOffset / 2;
@@ -177,14 +175,13 @@ const menuItems = computed(() => {
  * Requirements: 3.2 - 两列交错排列
  */
 const containerStyle = computed(() => {
-  const { itemSize, gap } = props;
-  const diagonal = itemSize * Math.SQRT2;
-  const columnOffset = diagonal + gap;
-  const rowOffset = diagonal * 0.6 + gap;
+  const diagonal = ITEM_SIZE * Math.SQRT2;
+  const columnOffset = diagonal + GAP_X;
+  const rowOffset = diagonal * 0.6 + GAP_Y;
   // 4 行 + 交错偏移 + 额外边距
-  const height = rowOffset * 4 + diagonal + gap;
+  const height = rowOffset * 4 + diagonal + GAP_Y;
   // 2 列 + 额外边距
-  const width = columnOffset + diagonal + gap;
+  const width = columnOffset + diagonal + GAP_X;
 
   return {
     width: `${width}px`,
@@ -212,11 +209,11 @@ function handleClick(key: string, isDisabled: boolean): void {
         item.colors.border,
         item.isDisabled
           ? 'cursor-not-allowed opacity-40'
-          : [item.colors.hover, 'cursor-pointer hover:scale-105 hover:shadow-md'],
+          : [item.colors.hover, 'cursor-pointer hover:shadow-md hover:brightness-105'],
       ]"
       :style="{
-        width: `${itemSize}px`,
-        height: `${itemSize}px`,
+        width: `${ITEM_SIZE}px`,
+        height: `${ITEM_SIZE}px`,
         left: '50%',
         top: '50%',
         transform: `translate(calc(-50% + ${item.x}px), calc(-50% + ${item.y}px)) rotate(45deg)`,

@@ -4,7 +4,7 @@
  * @description 全屏画布战斗页面，使用 GameCanvas 进行渲染
  * 使用新版 slot 接口：header、overlay、unit-info
  */
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onUnmounted } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 import GameCanvas from "@/components/gamecanvas/GameCanvas.vue";
 import BattleHeader from "../components/BattleHeader.vue";
@@ -24,6 +24,10 @@ const phase = ref<BattlePhase>("init");
 const turn = ref(1);
 const timer = ref(60);
 const result = ref<"win" | "lose" | "escape" | null>(null);
+
+// 目标选择状态
+type SelectionMode = "none" | "attack" | "skill" | "item";
+const selectionMode = ref<SelectionMode>("none");
 
 // 单位数据
 const playerUnits = ref<UnitConfig[]>([]);
@@ -128,8 +132,34 @@ const actionQueueProgress = computed(() => 0);
 
 // ============ 方法 ============
 
+// GameCanvas 组件引用
+const canvasRef = ref<InstanceType<typeof GameCanvas> | null>(null);
+
+// 当前选中的目标单位 ID
+const selectedTargetId = ref<string | null>(null);
+
 function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
   console.log("[BattlePage] 单位被点击:", payload.unit.name, payload.position);
+
+  // 只有在选择目标模式下才处理点击
+  if (selectionMode.value !== "none") {
+    // 清除之前的选中
+    if (selectedTargetId.value) {
+      canvasRef.value?.setUnitSelected(null);
+    }
+
+    // 设置新的选中目标
+    selectedTargetId.value = payload.unit.id;
+    canvasRef.value?.setUnitSelected(payload.unit.id);
+
+    // 执行对应的行动
+    handleAction(selectionMode.value as ActionType, payload.unit.id);
+
+    // 重置选择模式
+    selectionMode.value = "none";
+    selectedTargetId.value = null;
+    canvasRef.value?.setUnitSelected(null);
+  }
 }
 
 function handleUnitHover(payload: { unit: BattleUnit | null }): void {
@@ -140,18 +170,27 @@ function handleMenuSelect(key: string): void {
   console.log("[BattlePage] 菜单选择:", key);
   switch (key) {
     case "attack":
+      // 进入攻击目标选择模式
+      selectionMode.value = "attack";
       break;
     case "skill":
+      // 进入技能目标选择模式
+      selectionMode.value = "skill";
       break;
     case "item":
+      // 进入物品目标选择模式
+      selectionMode.value = "item";
       break;
     case "defend":
+      selectionMode.value = "none";
       handleAction("defend");
       break;
     case "escape":
+      selectionMode.value = "none";
       handleAction("escape");
       break;
     default:
+      selectionMode.value = "none";
       break;
   }
 }
@@ -292,6 +331,8 @@ function resetBattle(): void {
   timer.value = 60;
   currentActorIndex.value = 0;
   result.value = null;
+  selectionMode.value = "none";
+  selectedTargetId.value = null;
   playerUnits.value = [];
   enemyUnits.value = [];
 }
