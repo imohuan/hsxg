@@ -10,6 +10,7 @@ import GameCanvas from "@/components/gamecanvas/GameCanvas.vue";
 import BattleHeader from "../components/BattleHeader.vue";
 import DiamondMenu from "../components/DiamondMenu.vue";
 import UnitInfoPopup from "../components/UnitInfoPopup.vue";
+import TargetInfoPanel from "../components/TargetInfoPanel.vue";
 import type { ActionType, UnitConfig, GameData, BattleUnit, BattlePhase, Point } from "@/types";
 
 // ============ 状态 ============
@@ -135,30 +136,84 @@ const actionQueueProgress = computed(() => 0);
 // GameCanvas 组件引用
 const canvasRef = ref<InstanceType<typeof GameCanvas> | null>(null);
 
-// 当前选中的目标单位 ID
-const selectedTargetId = ref<string | null>(null);
+// 当前选中的目标单位
+const selectedTarget = ref<BattleUnit | null>(null);
+
+// 双击检测
+let lastClickTime = 0;
+let lastClickUnitId: string | null = null;
+
+/** 获取敌方存活单位列表 */
+function getAliveEnemies(): BattleUnit[] {
+  return enemyUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, false));
+}
+
+/** 获取我方存活单位列表 */
+function getAlivePlayers(): BattleUnit[] {
+  return playerUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, true));
+}
+
+/** 进入目标选择模式 */
+function enterSelectionMode(mode: SelectionMode): void {
+  selectionMode.value = mode;
+
+  // 根据模式选择默认目标
+  let defaultTarget: BattleUnit | null = null;
+
+  if (mode === "attack") {
+    // 攻击默认选中敌方第一个存活单位
+    const enemies = getAliveEnemies();
+    defaultTarget = enemies[0] || null;
+  } else if (mode === "skill" || mode === "item") {
+    // 技能/物品可能需要选择友方或敌方，默认选敌方
+    const enemies = getAliveEnemies();
+    defaultTarget = enemies[0] || null;
+  }
+
+  if (defaultTarget) {
+    selectedTarget.value = defaultTarget;
+    canvasRef.value?.setUnitSelected(defaultTarget.id);
+  }
+}
+
+/** 退出目标选择模式 */
+function exitSelectionMode(): void {
+  selectionMode.value = "none";
+  selectedTarget.value = null;
+  canvasRef.value?.setUnitSelected(null);
+}
+
+/** 确认选择目标 */
+function confirmTargetSelection(): void {
+  if (!selectedTarget.value || selectionMode.value === "none") return;
+
+  // 执行对应的行动
+  handleAction(selectionMode.value as ActionType, selectedTarget.value.id);
+
+  // 退出选择模式
+  exitSelectionMode();
+}
 
 function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
   console.log("[BattlePage] 单位被点击:", payload.unit.name, payload.position);
 
   // 只有在选择目标模式下才处理点击
   if (selectionMode.value !== "none") {
-    // 清除之前的选中
-    if (selectedTargetId.value) {
-      canvasRef.value?.setUnitSelected(null);
-    }
+    const now = Date.now();
+    const isDoubleClick = lastClickUnitId === payload.unit.id && now - lastClickTime < 300;
 
-    // 设置新的选中目标
-    selectedTargetId.value = payload.unit.id;
+    // 更新点击记录
+    lastClickTime = now;
+    lastClickUnitId = payload.unit.id;
+
+    // 切换选中目标
+    selectedTarget.value = payload.unit;
     canvasRef.value?.setUnitSelected(payload.unit.id);
 
-    // 执行对应的行动
-    handleAction(selectionMode.value as ActionType, payload.unit.id);
-
-    // 重置选择模式
-    selectionMode.value = "none";
-    selectedTargetId.value = null;
-    canvasRef.value?.setUnitSelected(null);
+    // 双击直接确认
+    if (isDoubleClick) {
+      confirmTargetSelection();
+    }
   }
 }
 
@@ -171,26 +226,23 @@ function handleMenuSelect(key: string): void {
   switch (key) {
     case "attack":
       // 进入攻击目标选择模式
-      selectionMode.value = "attack";
+      enterSelectionMode("attack");
       break;
     case "skill":
       // 进入技能目标选择模式
-      selectionMode.value = "skill";
+      enterSelectionMode("skill");
       break;
     case "item":
       // 进入物品目标选择模式
-      selectionMode.value = "item";
+      enterSelectionMode("item");
       break;
     case "defend":
-      selectionMode.value = "none";
       handleAction("defend");
       break;
     case "escape":
-      selectionMode.value = "none";
       handleAction("escape");
       break;
     default:
-      selectionMode.value = "none";
       break;
   }
 }
@@ -332,7 +384,7 @@ function resetBattle(): void {
   currentActorIndex.value = 0;
   result.value = null;
   selectionMode.value = "none";
-  selectedTargetId.value = null;
+  selectedTarget.value = null;
   playerUnits.value = [];
   enemyUnits.value = [];
 }
@@ -385,7 +437,7 @@ watch(result, (newResult) => {
         <BattleHeader :scene="scene" :players="players" :turn="turnInfo" />
       </template>
 
-      <!-- overlay slot：菱形菜单（指令阶段显示） -->
+      <!-- overlay slot：菱形菜单或目标信息面板 -->
       <template #overlay="{ canvasSize }">
         <div
           v-if="phase === 'command'"
@@ -396,7 +448,15 @@ watch(result, (newResult) => {
             transform: 'translate(-50%, -50%)',
           }"
         >
-          <DiamondMenu @select="handleMenuSelect" />
+          <!-- 选择目标模式：显示目标信息面板 -->
+          <TargetInfoPanel
+            v-if="selectionMode !== 'none'"
+            :target="selectedTarget"
+            @confirm="confirmTargetSelection"
+            @cancel="exitSelectionMode"
+          />
+          <!-- 普通模式：显示菱形菜单 -->
+          <DiamondMenu v-else @select="handleMenuSelect" />
         </div>
       </template>
 
