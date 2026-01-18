@@ -6,7 +6,7 @@
  * Requirements: 1.6, 15.1-15.6
  */
 import { computed, ref, watch, onMounted, onBeforeUnmount } from "vue";
-import type { TimelineSegment, BattleSceneConfig, BattleUnit, SkillStep } from "@/types";
+import type { TimelineSegment, BattleUnit, SkillStep } from "@/types";
 import GameCanvas from "@/components/gamecanvas/GameCanvas.vue";
 import {
   SKILL_SANDBOX_UNITS,
@@ -26,6 +26,8 @@ const props = defineProps<{
   casterId: string;
   selectedTargetIds: string[];
   targetingModes: string[];
+  /** 目标数量限制（0 表示无限制） */
+  targetCount?: number;
 }>();
 
 const emit = defineEmits<{
@@ -61,7 +63,8 @@ function toBattleUnit(unit: SkillSandboxUnit): BattleUnit {
     maxMp: unit.maxMp,
     speed: unit.level,
     isDead: unit.hp <= 0,
-    selectable: isUnitSelectable(unit),
+    selectable: true, // 所有单位都可选，避免半透明效果
+    isPlayer: unit.side === "player",
   };
 }
 
@@ -75,6 +78,14 @@ function isUnitSelectable(unit: SkillSandboxUnit): boolean {
   return false;
 }
 
+/** 获取选择模式描述 */
+const selectionModeLabel = computed(() => {
+  const count = props.targetCount ?? 1;
+  if (count === 0) return "多选";
+  if (count === 1) return "单选";
+  return `最多 ${count} 个`;
+});
+
 /** 施法者单位 */
 const actorUnit = computed(() => {
   return (
@@ -84,20 +95,30 @@ const actorUnit = computed(() => {
   );
 });
 
-/** 画布场景配置 */
-const canvasConfig = computed<BattleSceneConfig>(() => {
+/** 画布场景配置 - 使用新版 gameData 格式 */
+const gameData = computed(() => {
   const playerUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "player").map(toBattleUnit);
   const enemyUnits = SKILL_SANDBOX_UNITS.filter((u) => u.side === "enemy").map(toBattleUnit);
 
   return {
-    sceneName: "技能预览",
-    backgroundColor: "#f1f5f9",
-    enemyPlayerName: "敌方",
-    playerName: "我方",
-    enemyUnits,
-    playerUnits,
-    activeUnitId: actorUnit.value?.id,
-    turnInfo: `帧 ${props.currentFrame + 1}/${Math.max(1, props.totalFrames)}`,
+    scene: {
+      name: "技能预览",
+      backgroundColor: "#f1f5f9",
+    },
+    players: {
+      enemy: { id: "enemy", name: "敌方" },
+      self: { id: "player", name: "我方" },
+    },
+    units: [...enemyUnits, ...playerUnits],
+    effects: [],
+    sounds: [],
+    skills: [],
+    items: [],
+    turn: {
+      number: 1,
+      activeUnitId: actorUnit.value?.id,
+      phase: "command" as const,
+    },
   };
 });
 
@@ -295,9 +316,10 @@ watch(
 watch(
   () => props.selectedTargetIds,
   (newTargetIds) => {
-    // 更新目标单位高亮（只高亮第一个目标）
-    const firstTarget = newTargetIds.length > 0 ? newTargetIds[0] : null;
-    canvasRef.value?.setTargetUnit(firstTarget ?? null);
+    if (!canvasRef.value) return;
+
+    // 使用新的多选 API
+    canvasRef.value.setUnitsSelected(newTargetIds);
   },
   { deep: true, immediate: true },
 );
@@ -326,53 +348,57 @@ watch(
 </script>
 
 <template>
-  <div
-    class="relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
-  >
-    <!-- 游戏画布 - 16:9 比例，亮色主题，enableTransform=true -->
+  <div class="relative h-full w-full overflow-hidden border border-slate-200 bg-slate-100">
+    <!-- 顶部标题栏：精简信息 -->
+    <div
+      class="absolute top-0 right-0 left-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2"
+    >
+      <!-- 左侧：帧信息 -->
+      <span class="text-xs text-slate-600">
+        帧 {{ currentFrame + 1 }}/{{ Math.max(1, totalFrames) }}
+      </span>
+
+      <!-- 中间：当前步骤 -->
+      <span v-if="activeSegment" class="text-xs text-slate-600">
+        当前步骤: {{ activeSegment.step?.type || "无" }}
+      </span>
+      <span v-else class="text-xs text-slate-400">无步骤</span>
+
+      <!-- 右侧：控制按钮 -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500">
+          目标: {{ selectedTargetIds.length }}
+          <span class="text-slate-400">({{ selectionModeLabel }})</span>
+        </span>
+        <button
+          class="rounded bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
+          type="button"
+          @click="resetView"
+        >
+          重置视图
+        </button>
+        <button
+          class="rounded bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
+          type="button"
+          @click="goToStart"
+        >
+          回到开始
+        </button>
+      </div>
+    </div>
+
+    <!-- 游戏画布 -->
     <GameCanvas
       ref="canvasRef"
-      :config="canvasConfig"
+      :game-data="gameData"
       :enable-transform="true"
       :width="CANVAS_WIDTH"
       :height="CANVAS_HEIGHT"
       class="absolute inset-0 h-full w-full"
       @unit-click="handleUnitClick"
-    />
-
-    <!-- 左上角：控制按钮 -->
-    <div
-      class="absolute top-14 left-4 z-20 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm"
     >
-      <button
-        class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
-        type="button"
-        @click="resetView"
-      >
-        重置视图
-      </button>
-      <button
-        class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-indigo-100 hover:text-indigo-600"
-        type="button"
-        @click="goToStart"
-      >
-        回到开始
-      </button>
-    </div>
-
-    <!-- 左下角：当前步骤信息 -->
-    <div
-      v-if="activeSegment"
-      class="absolute bottom-4 left-4 z-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur-sm"
-    >
-      当前步骤: {{ activeSegment.step?.type || "无" }}
-    </div>
-
-    <!-- 右下角：目标数量显示 -->
-    <div
-      class="absolute right-4 bottom-4 z-20 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur-sm"
-    >
-      目标: {{ selectedTargetIds.length }}
-    </div>
+      <!-- 空 header slot，使用外部自定义顶部栏 -->
+      <template #header />
+    </GameCanvas>
   </div>
 </template>

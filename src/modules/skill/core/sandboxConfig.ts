@@ -18,18 +18,20 @@ export interface SkillSandboxUnit {
 }
 
 /** 默认施法者ID */
-export const DEFAULT_ACTOR_ID = "player-front-1";
+export const DEFAULT_ACTOR_ID = "player-1";
 
 /** 默认目标ID列表 */
-export const DEFAULT_TARGET_IDS = ["enemy-front-1"];
+export const DEFAULT_TARGET_IDS = ["enemy-1"];
 
 /**
  * 技能编排沙盒单位数据
  * 包含玩家和敌人的测试单位，用于技能设计器的预览和测试
+ * 左右各6名角色
  */
 export const SKILL_SANDBOX_UNITS: SkillSandboxUnit[] = [
+  // 敌方单位（6名）
   {
-    id: "enemy-front-1",
+    id: "enemy-1",
     side: "enemy",
     name: "稻草人·甲",
     title: "前排拦截",
@@ -41,7 +43,7 @@ export const SKILL_SANDBOX_UNITS: SkillSandboxUnit[] = [
     level: 12,
   },
   {
-    id: "enemy-front-2",
+    id: "enemy-2",
     side: "enemy",
     name: "稻草人·乙",
     title: "前排磐石",
@@ -50,34 +52,59 @@ export const SKILL_SANDBOX_UNITS: SkillSandboxUnit[] = [
     hp: 520,
     maxMp: 0,
     mp: 0,
-    level: 12,
+    level: 11,
   },
   {
-    id: "enemy-back-1",
+    id: "enemy-3",
     side: "enemy",
     name: "稻草人·丙",
-    title: "后排靶子",
+    title: "中排靶子",
+    role: "dummy",
+    maxHp: 450,
+    hp: 450,
+    maxMp: 0,
+    mp: 0,
+    level: 10,
+  },
+  {
+    id: "enemy-4",
+    side: "enemy",
+    name: "稻草人·丁",
+    title: "中排木偶",
+    role: "dummy",
+    maxHp: 450,
+    hp: 450,
+    maxMp: 0,
+    mp: 0,
+    level: 9,
+  },
+  {
+    id: "enemy-5",
+    side: "enemy",
+    name: "稻草人·戊",
+    title: "后排标靶",
     role: "dummy",
     maxHp: 380,
     hp: 380,
     maxMp: 0,
     mp: 0,
-    level: 12,
+    level: 8,
   },
   {
-    id: "player-back-1",
-    side: "player",
-    name: "豪杰·弓手",
-    title: "后排输出",
-    role: "support",
-    maxHp: 410,
-    hp: 410,
-    maxMp: 220,
-    mp: 220,
-    level: 15,
+    id: "enemy-6",
+    side: "enemy",
+    name: "稻草人·己",
+    title: "后排假人",
+    role: "dummy",
+    maxHp: 380,
+    hp: 380,
+    maxMp: 0,
+    mp: 0,
+    level: 7,
   },
+  // 我方单位（6名）
   {
-    id: "player-front-1",
+    id: "player-1",
     side: "player",
     name: "豪杰·剑士",
     title: "前排主角",
@@ -89,16 +116,64 @@ export const SKILL_SANDBOX_UNITS: SkillSandboxUnit[] = [
     level: 15,
   },
   {
-    id: "player-front-2",
+    id: "player-2",
+    side: "player",
+    name: "豪杰·骑士",
+    title: "前排坦克",
+    role: "warrior",
+    maxHp: 600,
+    hp: 600,
+    maxMp: 120,
+    mp: 120,
+    level: 14,
+  },
+  {
+    id: "player-3",
     side: "player",
     name: "豪杰·医者",
-    title: "前排辅助",
+    title: "中排辅助",
     role: "support",
     maxHp: 430,
     hp: 430,
     maxMp: 300,
     mp: 300,
-    level: 15,
+    level: 13,
+  },
+  {
+    id: "player-4",
+    side: "player",
+    name: "豪杰·法师",
+    title: "中排法伤",
+    role: "mage",
+    maxHp: 380,
+    hp: 380,
+    maxMp: 400,
+    mp: 400,
+    level: 12,
+  },
+  {
+    id: "player-5",
+    side: "player",
+    name: "豪杰·弓手",
+    title: "后排输出",
+    role: "support",
+    maxHp: 410,
+    hp: 410,
+    maxMp: 220,
+    mp: 220,
+    level: 11,
+  },
+  {
+    id: "player-6",
+    side: "player",
+    name: "豪杰·刺客",
+    title: "后排刺杀",
+    role: "warrior",
+    maxHp: 350,
+    hp: 350,
+    maxMp: 180,
+    mp: 180,
+    level: 10,
   },
 ];
 

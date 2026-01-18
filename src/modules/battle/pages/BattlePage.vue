@@ -183,6 +183,9 @@ function enterSelectionMode(mode: SelectionMode, customRule?: TargetSelectionRul
   const rule = customRule || ACTION_TARGET_RULES[mode as ActionType];
   if (!rule) return;
 
+  console.log("[BattlePage] 进入选择模式:", mode, "规则:", rule);
+  console.log("[BattlePage] 当前行动者:", actor.id, actor.name, "isPlayer:", actor.isPlayer);
+
   // 检查是否需要选择目标
   if (!needsTargetSelection(rule)) {
     // 不需要选择目标，直接执行
@@ -196,7 +199,16 @@ function enterSelectionMode(mode: SelectionMode, customRule?: TargetSelectionRul
 
   // 过滤可选单位
   const allUnits = getAllUnits();
+  console.log(
+    "[BattlePage] 所有单位:",
+    allUnits.map((u) => ({ id: u.id, name: u.name, isPlayer: u.isPlayer })),
+  );
+
   selectableUnits.value = filterSelectableUnits(allUnits, rule, actor.id, actor.isPlayer);
+  console.log(
+    "[BattlePage] 过滤后可选单位:",
+    selectableUnits.value.map((u) => ({ id: u.id, name: u.name, isPlayer: u.isPlayer })),
+  );
 
   // 获取默认目标
   const defaultTarget = getDefaultTarget(selectableUnits.value, rule, actor.isPlayer);
@@ -232,12 +244,18 @@ function confirmTargetSelection(): void {
 }
 
 function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
-  console.log("[BattlePage] 单位被点击:", payload.unit.name, payload.position);
+  console.log("[BattlePage] 单位被点击:", payload.unit.name, "isPlayer:", payload.unit.isPlayer);
+  console.log("[BattlePage] 当前选择模式:", selectionMode.value);
+  console.log(
+    "[BattlePage] 可选单位:",
+    selectableUnits.value.map((u) => ({ id: u.id, name: u.name, isPlayer: u.isPlayer })),
+  );
 
   // 只有在选择目标模式下才处理点击
   if (selectionMode.value !== "none") {
     // 检查点击的单位是否在可选列表中
     const isSelectable = selectableUnits.value.some((u) => u.id === payload.unit.id);
+    console.log("[BattlePage] 是否可选:", isSelectable);
     if (!isSelectable) {
       console.log("[BattlePage] 该单位不可选择");
       return;
@@ -499,6 +517,7 @@ watch(result, (newResult) => {
             @confirm="confirmTargetSelection"
             @cancel="exitSelectionMode"
           />
+
           <!-- 普通模式：显示菱形菜单 -->
           <DiamondMenu v-else @select="handleMenuSelect" />
         </div>

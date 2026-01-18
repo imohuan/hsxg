@@ -11,9 +11,11 @@ import SkillBattlePreview from "@/modules/skill/components/SkillBattlePreview.vu
 import SkillTimeline from "@/modules/skill/components/SkillTimeline.vue";
 import SkillTimelineControls from "@/modules/skill/components/SkillTimelineControls.vue";
 import SkillTabPanel from "@/modules/skill/components/SkillTabPanel.vue";
-import type { SkillDesign, SkillStep, StepType, TimelineSegment } from "@/types";
+import SkillConfigPanel from "@/modules/skill/components/SkillConfigPanel.vue";
+import type { SkillDesign, SkillStep, StepType, TimelineSegment, SkillTargetConfig } from "@/types";
 import type { LibraryDragPayload } from "@/modules/skill/composables/useLibraryDragToTimeline";
-import { DEFAULT_ACTOR_ID, DEFAULT_TARGET_IDS } from "@/modules/skill/core/sandboxConfig";
+import { useTargetSelection } from "@/modules/skill/composables/useTargetSelection";
+import { DEFAULT_ACTOR_ID } from "@/modules/skill/core/sandboxConfig";
 import { useSplitPane } from "@/modules/designer/composables/useSplitPane";
 
 // ============ Store ============
@@ -37,15 +39,20 @@ const currentSkillData = reactive<{
   name: string;
   steps: SkillStep[];
   casterId: string;
-  selectedTargetIds: string[];
-  targetingModes: string[];
 }>({
   id: "",
   name: "",
   steps: [],
   casterId: DEFAULT_ACTOR_ID,
-  selectedTargetIds: [...DEFAULT_TARGET_IDS],
-  targetingModes: ["enemy"],
+});
+
+// ============ 目标选择（插件化） ============
+
+const targetSelection = useTargetSelection({
+  casterId: DEFAULT_ACTOR_ID,
+  onSelectionChange: () => {
+    // 选择变更时可以触发其他逻辑
+  },
 });
 
 // ============ 计算属性 ============
@@ -77,7 +84,8 @@ const skillTimelineSegments = computed<TimelineSegment[]>(() => {
         ? params.duration
         : Number(params.duration) || STEP_FRAME_DEFAULT[step.type] || 30;
     const frames = Math.max(1, Math.min(MAX_FRAMES_PER_STEP, Math.round(raw)));
-    const hasStartFrame = typeof params.startFrame === "number" && Number.isFinite(params.startFrame);
+    const hasStartFrame =
+      typeof params.startFrame === "number" && Number.isFinite(params.startFrame);
     const start = hasStartFrame ? Math.max(0, Math.round(params.startFrame as number)) : cursor;
 
     const segment: TimelineSegment = {
@@ -194,10 +202,26 @@ function syncCurrentSkillData(): void {
     currentSkillData.name = currentSkill.value.name;
     currentSkillData.steps = [...currentSkill.value.steps];
     fps.value = currentSkill.value.fps || 10;
+    // 同步技能配置到选择器
+    const config = currentSkill.value.targetConfig ?? {
+      isNormalAttack: false,
+      targetRole: "any" as const,
+      targetScope: ["enemy" as const],
+      targetCount: 1,
+    };
+    targetSelection.updateConfig(config);
+    targetSelection.clearSelection();
   } else {
     currentSkillData.id = "";
     currentSkillData.name = "";
     currentSkillData.steps = [];
+    targetSelection.updateConfig({
+      isNormalAttack: false,
+      targetRole: "any",
+      targetScope: ["enemy"],
+      targetCount: 1,
+    });
+    targetSelection.clearSelection();
   }
 }
 
@@ -208,6 +232,7 @@ function saveCurrentSkillData(): void {
     name: currentSkillData.name,
     steps: currentSkillData.steps,
     fps: fps.value,
+    targetConfig: targetSelection.config.value,
   });
 }
 
@@ -289,14 +314,15 @@ function handleDropStepFromLibrary(payload: LibraryDragPayload): void {
   handleDropStep(newStepIndex, targetTime, trackId);
 }
 
-// 切换目标
+// 切换目标（使用插件化选择策略）
 function handleToggleTarget(unitId: string): void {
-  const exists = currentSkillData.selectedTargetIds.includes(unitId);
-  if (exists) {
-    currentSkillData.selectedTargetIds = currentSkillData.selectedTargetIds.filter((id) => id !== unitId);
-  } else {
-    currentSkillData.selectedTargetIds = [...currentSkillData.selectedTargetIds, unitId];
-  }
+  targetSelection.handleUnitClick(unitId);
+}
+
+// 更新技能配置
+function handleUpdateConfig(config: SkillTargetConfig): void {
+  targetSelection.updateConfig(config);
+  saveCurrentSkillData();
 }
 
 // ============ 分割面板 ============
@@ -359,7 +385,9 @@ watch(
               <div class="min-w-0 flex-1">
                 <p
                   class="truncate text-sm font-medium"
-                  :class="designerStore.currentSkillId === skill.id ? 'text-indigo-600' : 'text-slate-700'"
+                  :class="
+                    designerStore.currentSkillId === skill.id ? 'text-indigo-600' : 'text-slate-700'
+                  "
                 >
                   {{ skill.name }}
                 </p>
@@ -434,6 +462,13 @@ watch(
         @update-step-param="updateStepParam"
         @drop-step-from-library="handleDropStepFromLibrary"
       />
+
+      <!-- 技能配置面板 -->
+      <SkillConfigPanel
+        v-if="currentSkill"
+        :config="targetSelection.config.value"
+        @update:config="handleUpdateConfig"
+      />
     </template>
 
     <!-- 右侧编辑区域 -->
@@ -452,8 +487,9 @@ watch(
             :fps="fps"
             :segments="skillTimelineSegments"
             :caster-id="currentSkillData.casterId"
-            :selected-target-ids="currentSkillData.selectedTargetIds"
-            :targeting-modes="currentSkillData.targetingModes"
+            :selected-target-ids="targetSelection.selectedTargetIds.value"
+            :targeting-modes="targetSelection.targetingModes.value"
+            :target-count="targetSelection.config.value.targetCount"
             @update:current-frame="currentFrame = $event"
             @toggle-target="handleToggleTarget"
           />
@@ -507,8 +543,15 @@ watch(
       <!-- 空状态 -->
       <div v-else class="flex h-full items-center justify-center bg-slate-50">
         <div class="text-center">
-          <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100">
-            <svg class="size-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div
+            class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-slate-100"
+          >
+            <svg
+              class="size-8 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"

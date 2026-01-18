@@ -178,6 +178,8 @@ defineExpose<UnifiedBattleCanvasExpose>({
   executeSteps: (...args) => canvasRef.value?.executeSteps(...args) ?? Promise.resolve(),
   executeStepsParallel: (...args) =>
     canvasRef.value?.executeStepsParallel(...args) ?? Promise.resolve(),
+  setUnitsSelected: (...args) => canvasRef.value?.setUnitsSelected(...args),
+  clearAllSelections: () => canvasRef.value?.clearAllSelections(),
   setTargetUnit: (...args) => canvasRef.value?.setTargetUnit(...args),
   setActiveUnit: (...args) => canvasRef.value?.setActiveUnit(...args),
 });

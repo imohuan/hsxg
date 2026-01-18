@@ -567,16 +567,8 @@ function handleCanvasClick(e: MouseEvent) {
  * 处理单位点击
  */
 function handleUnitClick(unit: BattleUnit, position: Point) {
-  // 取消之前的选择
-  if (selectedUnit.value) {
-    unitManager.setUnitSelected(selectedUnit.value.id, false);
-  }
-
-  // 设置新的选择
-  selectedUnit.value = unit;
-  unitManager.setUnitSelected(unit.id, true);
-
-  // 新版事件
+  // 只触发事件，不自动选中
+  // 选中逻辑由父组件通过 setUnitSelected API 控制
   emit("unit:click", { unit, position });
   emit("unit:select", { unit });
 
@@ -638,6 +630,31 @@ function setUnitSelected(unitId: string | null): void {
   } else {
     selectedUnit.value = null;
   }
+}
+
+/** 设置多个单位的选中状态（支持多选） */
+function setUnitsSelected(unitIds: string[]): void {
+  // 先清除所有选中状态
+  unitManager.clearAllSelections();
+
+  // 设置新的选中状态
+  unitIds.forEach((id) => {
+    unitManager.setUnitSelected(id, true);
+  });
+
+  // 更新 selectedUnit 为第一个选中的单位
+  if (unitIds.length > 0) {
+    const unit = allUnits.value.find((u) => u.id === unitIds[0]);
+    selectedUnit.value = unit ?? null;
+  } else {
+    selectedUnit.value = null;
+  }
+}
+
+/** 清除所有选中状态 */
+function clearAllSelections(): void {
+  unitManager.clearAllSelections();
+  selectedUnit.value = null;
 }
 
 // ============ 导出 API：特效控制 ============
@@ -870,6 +887,10 @@ defineExpose<UnifiedBattleCanvasExpose>({
   executeStep,
   executeSteps,
   executeStepsParallel,
+
+  // 多选支持
+  setUnitsSelected,
+  clearAllSelections,
 
   // 兼容旧版
   setTargetUnit,

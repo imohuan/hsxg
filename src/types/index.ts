@@ -190,6 +190,24 @@ export interface TimelineTrack {
   hidden: boolean;
 }
 
+/** 技能效果范围 */
+export type SkillTargetScope = "enemy" | "ally" | "self" | "all";
+
+/** 目标职业类型 */
+export type TargetRoleType = "warrior" | "mage" | "support" | "any";
+
+/** 技能目标配置 */
+export interface SkillTargetConfig {
+  /** 是否是普通攻击 */
+  isNormalAttack: boolean;
+  /** 目标职业（不同职业攻击方式可能不同） */
+  targetRole: TargetRoleType;
+  /** 技能效果范围 */
+  targetScope: SkillTargetScope[];
+  /** 目标数量（0 表示无限制） */
+  targetCount: number;
+}
+
 /** 技能设计 */
 export interface SkillDesign {
   id: string;
@@ -199,6 +217,8 @@ export interface SkillDesign {
   tracks: TimelineTrack[];
   totalFrames: number;
   fps: number;
+  /** 技能目标配置 */
+  targetConfig?: SkillTargetConfig;
 }
 
 // ============ 配置导出类型 ============
@@ -701,6 +721,14 @@ export interface UnifiedBattleCanvasExpose {
 
   /** 并行执行多个步骤 */
   executeStepsParallel(steps: SkillStep[]): Promise<void>;
+
+  // ============ 多选支持 ============
+
+  /** 设置多个单位的选中状态（支持多选） */
+  setUnitsSelected(unitIds: string[]): void;
+
+  /** 清除所有选中状态 */
+  clearAllSelections(): void;
 
   // ============ 选中控制（兼容旧版） ============
 
