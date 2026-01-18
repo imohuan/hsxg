@@ -64,7 +64,7 @@ const lastSavedAtFormatted = computed(() => {
 function generateConfig(): void {
   // 先从 designer store 同步数据
   configStore.syncFromDesignerStore({
-    characters: designerStore.characters,
+    characters: designerStore.characters, 
     effects: designerStore.effects,
     skills: designerStore.skills,
   });

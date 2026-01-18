@@ -92,7 +92,8 @@ src/
 │   │   ├── components/
 │   │   │   ├── SpriteEditor.vue   # 雪碧图编辑器
 │   │   │   ├── AnimationPreview.vue# 动画预览
-│   │   │   ├── CharacterPanel.vue # 角色编辑面板
+│   │   │   ├── 
+.vue # 角色编辑面板
 │   │   │   ├── EffectPanel.vue    # 特效编辑面板
 │   │   │   └── JsonPanel.vue      # JSON 配置面板
 │   │   ├── composables/

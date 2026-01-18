@@ -4,7 +4,11 @@
  * @description 整合雪碧图编辑器、角色面板和动画预览组件（现代 SaaS 风格）
  */
 import { ref, computed, reactive } from "vue";
-import { RefreshOutlined, UploadFileOutlined, SaveOutlined } from "@vicons/material";
+import {
+  RefreshOutlined,
+  UploadFileOutlined,
+  SaveOutlined,
+} from "@vicons/material";
 import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
 import LibraryPanel from "@/components/common/LibraryPanel.vue";
 import CanvasPreview from "@/components/common/CanvasPreview.vue";
@@ -13,7 +17,7 @@ import type { LibraryItem } from "@/components/common/LibraryPanel.vue";
 import type { SpriteSheetPreviewConfig } from "@/modules/designer/core/PreviewPlayer";
 import { useDesignerStore } from "@/stores/designer.store";
 
-// ============ Store ============
+// ============ Store ============ 
 const designerStore = useDesignerStore();
 
 // ============ 状态 ============
@@ -200,13 +204,22 @@ const inputClass =
         <div class="space-y-4 p-4">
           <!-- 名称 -->
           <label class="block">
-            <span class="mb-1.5 block text-xs font-medium text-slate-600">名称</span>
-            <input v-model="characterName" :class="inputClass" type="text" placeholder="输入角色名称" />
+            <span class="mb-1.5 block text-xs font-medium text-slate-600"
+              >名称</span
+            >
+            <input
+              v-model="characterName"
+              :class="inputClass"
+              type="text"
+              placeholder="输入角色名称"
+            />
           </label>
 
           <!-- 图片：URL 输入 + 上传按钮并排 -->
           <div>
-            <span class="mb-1.5 block text-xs font-medium text-slate-600">图片</span>
+            <span class="mb-1.5 block text-xs font-medium text-slate-600"
+              >图片</span
+            >
             <div class="flex gap-2">
               <input
                 v-model="characterConfig.url"
@@ -224,25 +237,49 @@ const inputClass =
                 <span>上传</span>
               </button>
             </div>
-            <p v-if="isLocalImage" class="mt-1.5 text-xs text-emerald-600">✓ 已加载本地图片</p>
-            <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleFileChange" />
+            <p v-if="isLocalImage" class="mt-1.5 text-xs text-emerald-600">
+              ✓ 已加载本地图片
+            </p>
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="handleFileChange"
+            />
           </div>
 
           <!-- 行列设置 -->
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
-              <span class="mb-1.5 block text-xs font-medium text-slate-600">行</span>
-              <input v-model.number="characterConfig.rows" :class="inputClass" min="1" type="number" />
+              <span class="mb-1.5 block text-xs font-medium text-slate-600"
+                >行</span
+              >
+              <input
+                v-model.number="characterConfig.rows"
+                :class="inputClass"
+                min="1"
+                type="number"
+              />
             </label>
             <label class="block">
-              <span class="mb-1.5 block text-xs font-medium text-slate-600">列</span>
-              <input v-model.number="characterConfig.cols" :class="inputClass" min="1" type="number" />
+              <span class="mb-1.5 block text-xs font-medium text-slate-600"
+                >列</span
+              >
+              <input
+                v-model.number="characterConfig.cols"
+                :class="inputClass"
+                min="1"
+                type="number"
+              />
             </label>
           </div>
 
           <!-- 帧数量 -->
           <label class="block">
-            <span class="mb-1.5 block text-xs font-medium text-slate-600">帧数量</span>
+            <span class="mb-1.5 block text-xs font-medium text-slate-600"
+              >帧数量</span
+            >
             <input
               v-model.number="characterConfig.frameCount"
               :class="inputClass"
@@ -250,12 +287,16 @@ const inputClass =
               type="number"
               :placeholder="`默认: ${characterConfig.rows * characterConfig.cols}`"
             />
-            <span class="mt-1 block text-xs text-slate-400">用于指定实际使用的帧数，当图片未铺满时使用</span>
+            <span class="mt-1 block text-xs text-slate-400"
+              >用于指定实际使用的帧数，当图片未铺满时使用</span
+            >
           </label>
 
           <!-- 缩放比例 -->
           <label class="block">
-            <span class="mb-1.5 block text-xs font-medium text-slate-600">缩放比例</span>
+            <span class="mb-1.5 block text-xs font-medium text-slate-600"
+              >缩放比例</span
+            >
             <input
               v-model.number="characterConfig.scale"
               :class="inputClass"
@@ -265,7 +306,9 @@ const inputClass =
               type="number"
               placeholder="默认: 1"
             />
-            <span class="mt-1 block text-xs text-slate-400">战斗场景中的显示缩放，建议 0.5 - 3.0</span>
+            <span class="mt-1 block text-xs text-slate-400"
+              >战斗场景中的显示缩放，建议 0.5 - 3.0</span
+            >
           </label>
 
           <!-- 刷新预览和保存按钮 -->

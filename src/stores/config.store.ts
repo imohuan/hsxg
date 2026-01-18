@@ -1,6 +1,11 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import type { ProjectConfig, CharacterConfig, EffectConfig, SkillDesign } from "@/types";
+import type {
+  ProjectConfig,
+  CharacterConfig,
+  EffectConfig,
+  SkillDesign,
+} from "@/types";
 import { ErrorType, AppError } from "@/types";
 
 const STORAGE_KEY = "battle-game-config";
@@ -62,7 +67,10 @@ export const useConfigStore = defineStore("config", () => {
   // ============ 验证方法 ============
 
   /** 验证 SpriteConfig */
-  function validateSpriteConfig(sprite: unknown, path: string): ValidationError[] {
+  function validateSpriteConfig(
+    sprite: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     if (typeof sprite !== "object" || sprite === null) {
       errors.push({ path, message: "雪碧图配置必须是对象" });
@@ -79,13 +87,22 @@ export const useConfigStore = defineStore("config", () => {
     if (typeof s.cols !== "number" || s.cols < 1) {
       errors.push({ path: `${path}.cols`, message: "cols 必须是正整数" });
     }
-    if (s.frameCount !== undefined && (typeof s.frameCount !== "number" || s.frameCount < 1)) {
-      errors.push({ path: `${path}.frameCount`, message: "frameCount 必须是正整数" });
+    if (
+      s.frameCount !== undefined &&
+      (typeof s.frameCount !== "number" || s.frameCount < 1)
+    ) {
+      errors.push({
+        path: `${path}.frameCount`,
+        message: "frameCount 必须是正整数",
+      });
     }
     if (s.fps !== undefined && (typeof s.fps !== "number" || s.fps < 1)) {
       errors.push({ path: `${path}.fps`, message: "fps 必须是正整数" });
     }
-    if (s.scale !== undefined && (typeof s.scale !== "number" || s.scale <= 0)) {
+    if (
+      s.scale !== undefined &&
+      (typeof s.scale !== "number" || s.scale <= 0)
+    ) {
       errors.push({ path: `${path}.scale`, message: "scale 必须是正数" });
     }
 
@@ -93,7 +110,10 @@ export const useConfigStore = defineStore("config", () => {
   }
 
   /** 验证 AnimationConfig */
-  function validateAnimationConfig(anim: unknown, path: string): ValidationError[] {
+  function validateAnimationConfig(
+    anim: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     if (typeof anim !== "object" || anim === null) {
       errors.push({ path, message: "动画配置必须是对象" });
@@ -107,7 +127,10 @@ export const useConfigStore = defineStore("config", () => {
     if (!Array.isArray(a.frames)) {
       errors.push({ path: `${path}.frames`, message: "frames 必须是数组" });
     } else if (!a.frames.every((f) => typeof f === "number" && f >= 0)) {
-      errors.push({ path: `${path}.frames`, message: "frames 必须是非负整数数组" });
+      errors.push({
+        path: `${path}.frames`,
+        message: "frames 必须是非负整数数组",
+      });
     }
     if (typeof a.fps !== "number" || a.fps < 1) {
       errors.push({ path: `${path}.fps`, message: "fps 必须是正整数" });
@@ -120,7 +143,10 @@ export const useConfigStore = defineStore("config", () => {
   }
 
   /** 验证 CharacterConfig */
-  function validateCharacterConfig(char: unknown, path: string): ValidationError[] {
+  function validateCharacterConfig(
+    char: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     if (typeof char !== "object" || char === null) {
       errors.push({ path, message: "角色配置必须是对象" });
@@ -138,10 +164,15 @@ export const useConfigStore = defineStore("config", () => {
     errors.push(...validateSpriteConfig(c.sprite, `${path}.sprite`));
 
     if (!Array.isArray(c.animations)) {
-      errors.push({ path: `${path}.animations`, message: "animations 必须是数组" });
+      errors.push({
+        path: `${path}.animations`,
+        message: "animations 必须是数组",
+      });
     } else {
       c.animations.forEach((anim, i) => {
-        errors.push(...validateAnimationConfig(anim, `${path}.animations[${i}]`));
+        errors.push(
+          ...validateAnimationConfig(anim, `${path}.animations[${i}]`),
+        );
       });
     }
 
@@ -149,7 +180,10 @@ export const useConfigStore = defineStore("config", () => {
   }
 
   /** 验证 EffectConfig */
-  function validateEffectConfig(effect: unknown, path: string): ValidationError[] {
+  function validateEffectConfig(
+    effect: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     if (typeof effect !== "object" || effect === null) {
       errors.push({ path, message: "特效配置必须是对象" });
@@ -167,15 +201,23 @@ export const useConfigStore = defineStore("config", () => {
     errors.push(...validateSpriteConfig(e.sprite, `${path}.sprite`));
 
     if (!Array.isArray(e.animations)) {
-      errors.push({ path: `${path}.animations`, message: "animations 必须是数组" });
+      errors.push({
+        path: `${path}.animations`,
+        message: "animations 必须是数组",
+      });
     } else {
       e.animations.forEach((anim, i) => {
-        errors.push(...validateAnimationConfig(anim, `${path}.animations[${i}]`));
+        errors.push(
+          ...validateAnimationConfig(anim, `${path}.animations[${i}]`),
+        );
       });
     }
 
     if (e.blendMode !== undefined && typeof e.blendMode !== "string") {
-      errors.push({ path: `${path}.blendMode`, message: "blendMode 必须是字符串" });
+      errors.push({
+        path: `${path}.blendMode`,
+        message: "blendMode 必须是字符串",
+      });
     }
 
     return errors;
@@ -194,9 +236,20 @@ export const useConfigStore = defineStore("config", () => {
       errors.push({ path: `${path}.id`, message: "id 必须是非空字符串" });
     }
 
-    const validTypes = ["move", "damage", "effect", "wait", "camera", "shake", "background"];
+    const validTypes = [
+      "move",
+      "damage",
+      "effect",
+      "wait",
+      "camera",
+      "shake",
+      "background",
+    ];
     if (typeof s.type !== "string" || !validTypes.includes(s.type)) {
-      errors.push({ path: `${path}.type`, message: `type 必须是以下之一: ${validTypes.join(", ")}` });
+      errors.push({
+        path: `${path}.type`,
+        message: `type 必须是以下之一: ${validTypes.join(", ")}`,
+      });
     }
 
     if (typeof s.params !== "object" || s.params === null) {
@@ -207,7 +260,10 @@ export const useConfigStore = defineStore("config", () => {
   }
 
   /** 验证 TimelineSegment */
-  function validateTimelineSegment(segment: unknown, path: string): ValidationError[] {
+  function validateTimelineSegment(
+    segment: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     if (typeof segment !== "object" || segment === null) {
       errors.push({ path, message: "时间轴片段必须是对象" });
@@ -219,18 +275,34 @@ export const useConfigStore = defineStore("config", () => {
       errors.push({ path: `${path}.id`, message: "id 必须是非空字符串" });
     }
     if (typeof seg.stepId !== "string" || seg.stepId.trim() === "") {
-      errors.push({ path: `${path}.stepId`, message: "stepId 必须是非空字符串" });
+      errors.push({
+        path: `${path}.stepId`,
+        message: "stepId 必须是非空字符串",
+      });
     }
     if (typeof seg.trackId !== "string" || seg.trackId.trim() === "") {
-      errors.push({ path: `${path}.trackId`, message: "trackId 必须是非空字符串" });
+      errors.push({
+        path: `${path}.trackId`,
+        message: "trackId 必须是非空字符串",
+      });
     }
     if (typeof seg.startFrame !== "number" || seg.startFrame < 0) {
-      errors.push({ path: `${path}.startFrame`, message: "startFrame 必须是非负整数" });
+      errors.push({
+        path: `${path}.startFrame`,
+        message: "startFrame 必须是非负整数",
+      });
     }
     if (typeof seg.endFrame !== "number" || seg.endFrame < 0) {
-      errors.push({ path: `${path}.endFrame`, message: "endFrame 必须是非负整数" });
+      errors.push({
+        path: `${path}.endFrame`,
+        message: "endFrame 必须是非负整数",
+      });
     }
-    if (typeof seg.startFrame === "number" && typeof seg.endFrame === "number" && seg.endFrame <= seg.startFrame) {
+    if (
+      typeof seg.startFrame === "number" &&
+      typeof seg.endFrame === "number" &&
+      seg.endFrame <= seg.startFrame
+    ) {
       errors.push({ path: `${path}`, message: "endFrame 必须大于 startFrame" });
     }
 
@@ -238,7 +310,10 @@ export const useConfigStore = defineStore("config", () => {
   }
 
   /** 验证 TimelineTrack */
-  function validateTimelineTrack(track: unknown, path: string): ValidationError[] {
+  function validateTimelineTrack(
+    track: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     if (typeof track !== "object" || track === null) {
       errors.push({ path, message: "时间轴轨道必须是对象" });
@@ -263,7 +338,10 @@ export const useConfigStore = defineStore("config", () => {
   }
 
   /** 验证 SkillDesign */
-  function validateSkillDesign(skill: unknown, path: string): ValidationError[] {
+  function validateSkillDesign(
+    skill: unknown,
+    path: string,
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     if (typeof skill !== "object" || skill === null) {
       errors.push({ path, message: "技能设计必须是对象" });
@@ -303,7 +381,10 @@ export const useConfigStore = defineStore("config", () => {
     }
 
     if (typeof s.totalFrames !== "number" || s.totalFrames < 1) {
-      errors.push({ path: `${path}.totalFrames`, message: "totalFrames 必须是正整数" });
+      errors.push({
+        path: `${path}.totalFrames`,
+        message: "totalFrames 必须是正整数",
+      });
     }
     if (typeof s.fps !== "number" || s.fps < 1) {
       errors.push({ path: `${path}.fps`, message: "fps 必须是正整数" });
@@ -317,7 +398,10 @@ export const useConfigStore = defineStore("config", () => {
     const errors: ValidationError[] = [];
 
     if (typeof config !== "object" || config === null) {
-      return { valid: false, errors: [{ path: "", message: "配置必须是对象" }] };
+      return {
+        valid: false,
+        errors: [{ path: "", message: "配置必须是对象" }],
+      };
     }
 
     const c = config as Record<string, unknown>;
@@ -369,7 +453,9 @@ export const useConfigStore = defineStore("config", () => {
   function exportConfig(): ProjectConfig {
     return {
       version: version.value,
-      characters: JSON.parse(JSON.stringify(characters.value)) as CharacterConfig[],
+      characters: JSON.parse(
+        JSON.stringify(characters.value),
+      ) as CharacterConfig[],
       effects: JSON.parse(JSON.stringify(effects.value)) as EffectConfig[],
       skills: JSON.parse(JSON.stringify(skills.value)) as SkillDesign[],
     };
@@ -377,7 +463,9 @@ export const useConfigStore = defineStore("config", () => {
 
   /** 导出配置为 JSON 字符串 */
   function exportConfigAsJson(pretty = true): string {
-    return pretty ? JSON.stringify(exportConfig(), null, 2) : JSON.stringify(exportConfig());
+    return pretty
+      ? JSON.stringify(exportConfig(), null, 2)
+      : JSON.stringify(exportConfig());
   }
 
   /** 下载配置为 JSON 文件 */
@@ -406,8 +494,12 @@ export const useConfigStore = defineStore("config", () => {
     }
 
     version.value = config.version;
-    characters.value = JSON.parse(JSON.stringify(config.characters)) as CharacterConfig[];
-    effects.value = JSON.parse(JSON.stringify(config.effects)) as EffectConfig[];
+    characters.value = JSON.parse(
+      JSON.stringify(config.characters),
+    ) as CharacterConfig[];
+    effects.value = JSON.parse(
+      JSON.stringify(config.effects),
+    ) as EffectConfig[];
     skills.value = JSON.parse(JSON.stringify(config.skills)) as SkillDesign[];
     hasUnsavedChanges.value = false;
   }
@@ -440,13 +532,19 @@ export const useConfigStore = defineStore("config", () => {
       reader.onload = (e) => {
         const content = e.target?.result as string;
         if (!content) {
-          resolve({ valid: false, errors: [{ path: "", message: "文件内容为空" }] });
+          resolve({
+            valid: false,
+            errors: [{ path: "", message: "文件内容为空" }],
+          });
           return;
         }
         resolve(importConfigFromJson(content));
       };
       reader.onerror = () => {
-        resolve({ valid: false, errors: [{ path: "", message: "文件读取失败" }] });
+        resolve({
+          valid: false,
+          errors: [{ path: "", message: "文件读取失败" }],
+        });
       };
       reader.readAsText(file);
     });
@@ -553,7 +651,9 @@ export const useConfigStore = defineStore("config", () => {
     effects: EffectConfig[];
     skills: SkillDesign[];
   }): void {
-    characters.value = JSON.parse(JSON.stringify(data.characters)) as CharacterConfig[];
+    characters.value = JSON.parse(
+      JSON.stringify(data.characters),
+    ) as CharacterConfig[];
     effects.value = JSON.parse(JSON.stringify(data.effects)) as EffectConfig[];
     skills.value = JSON.parse(JSON.stringify(data.skills)) as SkillDesign[];
     hasUnsavedChanges.value = true;
@@ -566,7 +666,9 @@ export const useConfigStore = defineStore("config", () => {
     skills: SkillDesign[];
   } {
     return {
-      characters: JSON.parse(JSON.stringify(characters.value)) as CharacterConfig[],
+      characters: JSON.parse(
+        JSON.stringify(characters.value),
+      ) as CharacterConfig[],
       effects: JSON.parse(JSON.stringify(effects.value)) as EffectConfig[],
       skills: JSON.parse(JSON.stringify(skills.value)) as SkillDesign[],
     };

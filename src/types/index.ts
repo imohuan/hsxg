@@ -49,7 +49,13 @@ export interface UnitConfig {
 }
 
 /** 行动类型 */
-export type ActionType = "attack" | "skill" | "item" | "defend" | "escape" | "summon";
+export type ActionType =
+  | "attack"
+  | "skill"
+  | "item"
+  | "defend"
+  | "escape"
+  | "summon";
 
 /** 战斗行动 */
 export interface BattleAction {
@@ -119,7 +125,15 @@ export interface EffectConfig {
 // ============ 时间轴类型 ============
 
 /** 步骤类型 */
-export type StepType = "move" | "damage" | "effect" | "wait" | "camera" | "shake" | "background" | "sound";
+export type StepType =
+  | "move"
+  | "damage"
+  | "effect"
+  | "wait"
+  | "camera"
+  | "shake"
+  | "background"
+  | "sound";
 
 /** 步骤参数 */
 export interface StepParams {
@@ -302,7 +316,12 @@ export interface BattleSceneConfig {
 }
 
 /** 缓动类型 */
-export type EasingType = "linear" | "easeIn" | "easeOut" | "easeInOut" | "bounce";
+export type EasingType =
+  | "linear"
+  | "easeIn"
+  | "easeOut"
+  | "easeInOut"
+  | "bounce";
 
 /** 伤害类型 */
 export type DamageType = "damage" | "heal" | "miss" | "critical";
@@ -552,9 +571,15 @@ export interface UnifiedBattleCanvasEmits {
 
   // 状态事件
   /** 血量变化 */
-  (e: "unit:hp-change", payload: { unitId: string; oldHp: number; newHp: number }): void;
+  (
+    e: "unit:hp-change",
+    payload: { unitId: string; oldHp: number; newHp: number },
+  ): void;
   /** 蓝量变化 */
-  (e: "unit:mp-change", payload: { unitId: string; oldMp: number; newMp: number }): void;
+  (
+    e: "unit:mp-change",
+    payload: { unitId: string; oldMp: number; newMp: number },
+  ): void;
   /** 单位死亡 */
   (e: "unit:death", payload: { unitId: string }): void;
   /** 相机状态变化 */
@@ -612,7 +637,12 @@ export interface UnifiedBattleCanvasExpose {
   // ============ 角色控制 ============
 
   /** 移动角色到指定位置 */
-  moveUnit(unitId: string, targetX: number, targetY: number, options?: MoveOptions): Promise<void>;
+  moveUnit(
+    unitId: string,
+    targetX: number,
+    targetY: number,
+    options?: MoveOptions,
+  ): Promise<void>;
 
   /** 播放角色动画 */
   playUnitAnimation(unitId: string, animationKey: string): Promise<void>;
@@ -641,10 +671,19 @@ export interface UnifiedBattleCanvasExpose {
   // ============ 特效控制 ============
 
   /** 在指定位置播放特效 */
-  playEffect(effectId: string, x: number, y: number, options?: EffectOptions): Promise<string>;
+  playEffect(
+    effectId: string,
+    x: number,
+    y: number,
+    options?: EffectOptions,
+  ): Promise<string>;
 
   /** 在角色位置播放特效 */
-  playEffectOnUnit(effectId: string, unitId: string, options?: EffectOptions): Promise<string>;
+  playEffectOnUnit(
+    effectId: string,
+    unitId: string,
+    options?: EffectOptions,
+  ): Promise<string>;
 
   /** 停止特效 */
   stopEffect(effectInstanceId: string): void;
@@ -658,10 +697,19 @@ export interface UnifiedBattleCanvasExpose {
   shakeCamera(intensity: number, duration: number): Promise<void>;
 
   /** 视角位移 */
-  moveCamera(offsetX: number, offsetY: number, duration: number, easing?: EasingType): Promise<void>;
+  moveCamera(
+    offsetX: number,
+    offsetY: number,
+    duration: number,
+    easing?: EasingType,
+  ): Promise<void>;
 
   /** 视角缩放 */
-  zoomCamera(scale: number, duration: number, easing?: EasingType): Promise<void>;
+  zoomCamera(
+    scale: number,
+    duration: number,
+    easing?: EasingType,
+  ): Promise<void>;
 
   /** 重置视角 */
   resetCamera(duration?: number): Promise<void>;
@@ -703,7 +751,12 @@ export interface UnifiedBattleCanvasExpose {
   showDamageNumber(unitId: string, value: number, type?: DamageType): void;
 
   /** 显示浮动文字 */
-  showFloatingText(x: number, y: number, text: string, options?: FloatingTextOptions): void;
+  showFloatingText(
+    x: number,
+    y: number,
+    text: string,
+    options?: FloatingTextOptions,
+  ): void;
 
   /** 更新血量 */
   updateUnitHp(unitId: string, currentHp: number, maxHp?: number): void;

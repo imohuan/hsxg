@@ -200,7 +200,8 @@ const soundConfigs = computed(() => {
 
 // 当前行动单位
 const activeUnit = computed<BattleUnit | null>(() => {
-  const activeId = props.gameData?.turn?.activeUnitId || props.config?.activeUnitId;
+  const activeId =
+    props.gameData?.turn?.activeUnitId || props.config?.activeUnitId;
   if (!activeId) return null;
   return allUnits.value.find((u) => u.id === activeId) || null;
 });
@@ -333,8 +334,10 @@ onMounted(() => {
     unitManager.initUnits(internalConfig.value);
 
     // 设置背景
-    const bgUrl = props.gameData?.scene.backgroundUrl || props.config?.backgroundUrl;
-    const bgColor = props.gameData?.scene.backgroundColor || props.config?.backgroundColor;
+    const bgUrl =
+      props.gameData?.scene.backgroundUrl || props.config?.backgroundUrl;
+    const bgColor =
+      props.gameData?.scene.backgroundColor || props.config?.backgroundColor;
     if (bgUrl) {
       renderer.setBackground(bgUrl);
     } else if (bgColor) {
@@ -590,7 +593,10 @@ async function moveUnit(
   emit("animation:end", { type: "move", unitId });
 }
 
-async function playUnitAnimation(unitId: string, animationKey: string): Promise<void> {
+async function playUnitAnimation(
+  unitId: string,
+  animationKey: string,
+): Promise<void> {
   emit("animation:start", { type: animationKey, unitId });
   await unitManager.playUnitAnimation(unitId, animationKey);
   emit("animation:end", { type: animationKey, unitId });
@@ -677,7 +683,12 @@ async function playEffectOnUnit(
 ): Promise<string> {
   const pos = getUnitPosition(unitId);
   if (!pos) return "";
-  const instanceId = await effectManager.playEffect(effectId, pos.x, pos.y, options);
+  const instanceId = await effectManager.playEffect(
+    effectId,
+    pos.x,
+    pos.y,
+    options,
+  );
   emit("effect:start", { effectId, instanceId });
   return instanceId;
 }
@@ -705,7 +716,11 @@ async function moveCamera(
   return cameraController.moveCamera(offsetX, offsetY, duration, easing);
 }
 
-async function zoomCamera(scale: number, duration: number, easing?: EasingType): Promise<void> {
+async function zoomCamera(
+  scale: number,
+  duration: number,
+  easing?: EasingType,
+): Promise<void> {
   return cameraController.zoomCamera(scale, duration, easing);
 }
 
@@ -713,7 +728,10 @@ async function resetCamera(duration?: number): Promise<void> {
   return cameraController.resetCamera(duration);
 }
 
-async function focusOnUnit(unitId: string, duration: number = 500): Promise<void> {
+async function focusOnUnit(
+  unitId: string,
+  duration: number = 500,
+): Promise<void> {
   const pos = getUnitPosition(unitId);
   if (pos) {
     return cameraController.focusOnPosition(pos.x, pos.y, duration);
@@ -734,7 +752,10 @@ function setBackgroundColor(color: string): void {
   renderer.setBackgroundColor(color);
 }
 
-async function fadeBackground(targetColor: string, duration: number): Promise<void> {
+async function fadeBackground(
+  targetColor: string,
+  duration: number,
+): Promise<void> {
   return renderer.fadeBackground(targetColor, duration);
 }
 
@@ -758,14 +779,23 @@ function stopAllSounds(): void {
 
 // ============ 导出 API：伤害/数值显示 ============
 
-function showDamageNumber(unitId: string, value: number, type?: DamageType): void {
+function showDamageNumber(
+  unitId: string,
+  value: number,
+  type?: DamageType,
+): void {
   const pos = getUnitPosition(unitId);
   if (pos) {
     renderer.showDamageNumber(unitId, pos.x, pos.y, value, type);
   }
 }
 
-function showFloatingText(x: number, y: number, text: string, options?: FloatingTextOptions): void {
+function showFloatingText(
+  x: number,
+  y: number,
+  text: string,
+  options?: FloatingTextOptions,
+): void {
   renderer.showFloatingText(x, y, text, options);
 }
 
@@ -937,14 +967,25 @@ defineExpose<UnifiedBattleCanvasExpose>({
       v-if="!slots.header && config"
       class="absolute top-0 right-0 left-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2 text-gray-800"
     >
-      <span class="text-sm font-bold text-red-600">{{ config.enemyPlayerName || "敌方" }}</span>
+      <span class="text-sm font-bold text-red-600">{{
+        config.enemyPlayerName || "敌方"
+      }}</span>
       <div class="flex flex-col items-center">
-        <span class="text-lg font-bold text-amber-600">{{ config.sceneName || "战斗" }}</span>
-        <span v-if="config.turnInfo || activeUnit" class="text-xs text-gray-500">
-          {{ config.turnInfo || (activeUnit ? `${activeUnit.name} 的回合` : "") }}
+        <span class="text-lg font-bold text-amber-600">{{
+          config.sceneName || "战斗"
+        }}</span>
+        <span
+          v-if="config.turnInfo || activeUnit"
+          class="text-xs text-gray-500"
+        >
+          {{
+            config.turnInfo || (activeUnit ? `${activeUnit.name} 的回合` : "")
+          }}
         </span>
       </div>
-      <span class="text-sm font-bold text-blue-600">{{ config.playerName || "我方" }}</span>
+      <span class="text-sm font-bold text-blue-600">{{
+        config.playerName || "我方"
+      }}</span>
     </div>
 
     <!-- overlay 插槽（覆盖层，用于菜单等） -->
@@ -956,7 +997,11 @@ defineExpose<UnifiedBattleCanvasExpose>({
 
     <!-- footer 插槽 -->
     <div v-if="slots.footer" class="absolute right-0 bottom-0 left-0 z-10">
-      <slot name="footer" :selected-unit="selectedUnit" :active-unit="activeUnit" />
+      <slot
+        name="footer"
+        :selected-unit="selectedUnit"
+        :active-unit="activeUnit"
+      />
     </div>
 
     <!-- unit-info 插槽（单位信息悬浮框） -->

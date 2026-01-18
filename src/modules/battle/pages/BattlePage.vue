@@ -11,7 +11,14 @@ import BattleHeader from "../components/BattleHeader.vue";
 import DiamondMenu from "../components/DiamondMenu.vue";
 import UnitInfoPopup from "../components/UnitInfoPopup.vue";
 import TargetInfoPanel from "../components/TargetInfoPanel.vue";
-import type { ActionType, UnitConfig, GameData, BattleUnit, BattlePhase, Point } from "@/types";
+import type {
+  ActionType,
+  UnitConfig,
+  GameData,
+  BattleUnit,
+  BattlePhase,
+  Point,
+} from "@/types";
 import {
   ACTION_TARGET_RULES,
   filterSelectableUnits,
@@ -73,8 +80,12 @@ function toBattleUnit(config: UnitConfig, isPlayer: boolean): BattleUnit {
 
 /** 新版 GameData 配置 */
 const gameData = computed<GameData>(() => {
-  const players = playerUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, true));
-  const enemies = enemyUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, false));
+  const players = playerUnits.value
+    .filter((u) => u.stats.hp > 0)
+    .map((u) => toBattleUnit(u, true));
+  const enemies = enemyUnits.value
+    .filter((u) => u.stats.hp > 0)
+    .map((u) => toBattleUnit(u, false));
   const currentActor = playerUnits.value[currentActorIndex.value];
 
   return {
@@ -95,7 +106,11 @@ const gameData = computed<GameData>(() => {
       number: turn.value,
       activeUnitId: currentActor?.id,
       phase:
-        phase.value === "command" ? "command" : phase.value === "execute" ? "execute" : "result",
+        phase.value === "command"
+          ? "command"
+          : phase.value === "execute"
+            ? "execute"
+            : "result",
     },
   };
 });
@@ -156,12 +171,16 @@ let lastClickUnitId: string | null = null;
 
 /** 获取敌方存活单位列表 */
 function getAliveEnemies(): BattleUnit[] {
-  return enemyUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, false));
+  return enemyUnits.value
+    .filter((u) => u.stats.hp > 0)
+    .map((u) => toBattleUnit(u, false));
 }
 
 /** 获取我方存活单位列表 */
 function getAlivePlayers(): BattleUnit[] {
-  return playerUnits.value.filter((u) => u.stats.hp > 0).map((u) => toBattleUnit(u, true));
+  return playerUnits.value
+    .filter((u) => u.stats.hp > 0)
+    .map((u) => toBattleUnit(u, true));
 }
 
 /** 获取所有单位 */
@@ -175,7 +194,10 @@ function getCurrentActor(): UnitConfig | null {
 }
 
 /** 进入目标选择模式 */
-function enterSelectionMode(mode: SelectionMode, customRule?: TargetSelectionRule): void {
+function enterSelectionMode(
+  mode: SelectionMode,
+  customRule?: TargetSelectionRule,
+): void {
   const actor = getCurrentActor();
   if (!actor) return;
 
@@ -184,7 +206,13 @@ function enterSelectionMode(mode: SelectionMode, customRule?: TargetSelectionRul
   if (!rule) return;
 
   console.log("[BattlePage] 进入选择模式:", mode, "规则:", rule);
-  console.log("[BattlePage] 当前行动者:", actor.id, actor.name, "isPlayer:", actor.isPlayer);
+  console.log(
+    "[BattlePage] 当前行动者:",
+    actor.id,
+    actor.name,
+    "isPlayer:",
+    actor.isPlayer,
+  );
 
   // 检查是否需要选择目标
   if (!needsTargetSelection(rule)) {
@@ -204,14 +232,27 @@ function enterSelectionMode(mode: SelectionMode, customRule?: TargetSelectionRul
     allUnits.map((u) => ({ id: u.id, name: u.name, isPlayer: u.isPlayer })),
   );
 
-  selectableUnits.value = filterSelectableUnits(allUnits, rule, actor.id, actor.isPlayer);
+  selectableUnits.value = filterSelectableUnits(
+    allUnits,
+    rule,
+    actor.id,
+    actor.isPlayer,
+  );
   console.log(
     "[BattlePage] 过滤后可选单位:",
-    selectableUnits.value.map((u) => ({ id: u.id, name: u.name, isPlayer: u.isPlayer })),
+    selectableUnits.value.map((u) => ({
+      id: u.id,
+      name: u.name,
+      isPlayer: u.isPlayer,
+    })),
   );
 
   // 获取默认目标
-  const defaultTarget = getDefaultTarget(selectableUnits.value, rule, actor.isPlayer);
+  const defaultTarget = getDefaultTarget(
+    selectableUnits.value,
+    rule,
+    actor.isPlayer,
+  );
 
   if (defaultTarget) {
     selectedTarget.value = defaultTarget;
@@ -244,17 +285,28 @@ function confirmTargetSelection(): void {
 }
 
 function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
-  console.log("[BattlePage] 单位被点击:", payload.unit.name, "isPlayer:", payload.unit.isPlayer);
+  console.log(
+    "[BattlePage] 单位被点击:",
+    payload.unit.name,
+    "isPlayer:",
+    payload.unit.isPlayer,
+  );
   console.log("[BattlePage] 当前选择模式:", selectionMode.value);
   console.log(
     "[BattlePage] 可选单位:",
-    selectableUnits.value.map((u) => ({ id: u.id, name: u.name, isPlayer: u.isPlayer })),
+    selectableUnits.value.map((u) => ({
+      id: u.id,
+      name: u.name,
+      isPlayer: u.isPlayer,
+    })),
   );
 
   // 只有在选择目标模式下才处理点击
   if (selectionMode.value !== "none") {
     // 检查点击的单位是否在可选列表中
-    const isSelectable = selectableUnits.value.some((u) => u.id === payload.unit.id);
+    const isSelectable = selectableUnits.value.some(
+      (u) => u.id === payload.unit.id,
+    );
     console.log("[BattlePage] 是否可选:", isSelectable);
     if (!isSelectable) {
       console.log("[BattlePage] 该单位不可选择");
@@ -262,7 +314,8 @@ function handleUnitClick(payload: { unit: BattleUnit; position: Point }): void {
     }
 
     const now = Date.now();
-    const isDoubleClick = lastClickUnitId === payload.unit.id && now - lastClickTime < 300;
+    const isDoubleClick =
+      lastClickUnitId === payload.unit.id && now - lastClickTime < 300;
 
     // 更新点击记录
     lastClickTime = now;
@@ -482,7 +535,10 @@ watch(result, (newResult) => {
 
 <template>
   <!-- 全屏画布容器 -->
-  <div ref="containerRef" class="relative h-full w-full overflow-hidden bg-gray-50">
+  <div
+    ref="containerRef"
+    class="relative h-full w-full overflow-hidden bg-gray-50"
+  >
     <!-- 战斗画布 - 使用 GameCanvas -->
     <GameCanvas
       ref="canvasRef"
@@ -562,7 +618,10 @@ watch(result, (newResult) => {
     </div>
 
     <!-- 中央：开始战斗按钮（初始状态显示） -->
-    <div v-if="phase === 'init'" class="absolute inset-0 z-30 flex items-center justify-center">
+    <div
+      v-if="phase === 'init'"
+      class="absolute inset-0 z-30 flex items-center justify-center"
+    >
       <div class="flex flex-col items-center gap-4">
         <button
           class="rounded-xl bg-indigo-500 px-8 py-4 text-xl font-bold text-white shadow-lg shadow-indigo-500/30 transition-all hover:scale-105 hover:bg-indigo-600 hover:shadow-xl"
@@ -579,7 +638,9 @@ watch(result, (newResult) => {
       v-if="showResultModal"
       class="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
     >
-      <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-2xl">
+      <div
+        class="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-2xl"
+      >
         <h2 class="mb-4 text-3xl font-bold" :class="resultColor">
           {{ resultText }}
         </h2>
