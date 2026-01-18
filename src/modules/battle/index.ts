@@ -18,8 +18,6 @@ export { useBattle } from "./composables/useBattle";
 export type { BattleState, UseBattleOptions, UseBattleReturn } from "./composables/useBattle";
 
 // 组件
-export { default as BattleCanvas } from "./components/BattleCanvas.vue";
-export { default as BattleMenu } from "./components/BattleMenu.vue";
 export { default as DiamondMenu } from "./components/DiamondMenu.vue";
 export { default as BattleHeader } from "./components/BattleHeader.vue";
 export { default as UnitInfoPopup } from "./components/UnitInfoPopup.vue";
