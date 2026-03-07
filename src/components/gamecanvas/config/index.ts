@@ -8,7 +8,7 @@
 /** 单位尺寸配置 */
 export const UNIT_SIZE = {
   /** 单位宽度 */
-  width: 120,
+  width: 150,
   /** 单位高度 */
   height: 200,
 } as const;

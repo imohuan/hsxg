@@ -6,6 +6,7 @@
 import { ref, computed, reactive, watch } from "vue";
 import { AddOutlined, DeleteOutlined, EditOutlined, SaveOutlined } from "@vicons/material";
 import { useDesignerStore } from "@/stores/designer.store";
+import CollapsibleSection from "@/components/common/CollapsibleSection.vue";
 import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
 import SkillBattlePreview from "@/modules/skill/components/SkillBattlePreview.vue";
 import SkillTimeline from "@/modules/skill/components/SkillTimeline.vue";
@@ -357,29 +358,32 @@ watch(
   <DesignerTabLayout>
     <!-- 左侧面板 -->
     <template #left>
-      <!-- 技能列表 -->
-      <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-          <h3 class="text-sm font-semibold text-slate-800">技能列表</h3>
-          <button
-            class="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow"
-            @click="openCreateDialog"
-          >
-            <AddOutlined class="size-3.5" />
-            新建
-          </button>
-        </div>
+      <div class="flex h-full flex-col gap-3 overflow-auto p-4">
+        <!-- 技能列表 -->
+        <CollapsibleSection title="技能列表" :default-expanded="true">
+          <div class="mb-3 flex justify-end">
+            <button
+              class="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow"
+              @click="openCreateDialog"
+            >
+              <AddOutlined class="size-3.5" />
+              新建
+            </button>
+          </div>
 
-        <div class="max-h-48 overflow-auto">
-          <div v-if="skills.length === 0" class="p-4 text-center text-xs text-slate-400">
+          <div v-if="skills.length === 0" class="py-8 text-center text-xs text-slate-400">
             暂无技能，点击上方按钮创建
           </div>
-          <div v-else class="divide-y divide-slate-100">
+          <div v-else class="space-y-2">
             <div
               v-for="skill in skills"
               :key="skill.id"
-              class="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-slate-50"
-              :class="{ 'bg-indigo-50': designerStore.currentSkillId === skill.id }"
+              class="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-all"
+              :class="
+                designerStore.currentSkillId === skill.id
+                  ? 'border-indigo-200 bg-indigo-50'
+                  : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white'
+              "
               @click="selectSkill(skill)"
             >
               <div class="min-w-0 flex-1">
@@ -402,73 +406,81 @@ watch(
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- 当前技能编辑 -->
-        <div v-if="currentSkill" class="border-t border-slate-100 bg-slate-50/50 p-3">
-          <div class="mb-2 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-500">当前:</span>
-              <template v-if="isEditing">
-                <input
-                  v-model="editingName"
-                  type="text"
-                  class="w-24 rounded border border-indigo-300 bg-white px-2 py-1 text-sm text-slate-800 ring-2 ring-indigo-100 outline-none"
-                  autofocus
-                  @keydown="handleKeydown"
-                  @blur="saveEditName"
-                />
-              </template>
-              <template v-else>
-                <span class="text-sm font-medium text-slate-800">{{ currentSkill.name }}</span>
-                <button
-                  class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
-                  title="编辑名称"
-                  @click="startEditName"
-                >
-                  <EditOutlined class="size-3.5" />
-                </button>
-              </template>
+          <!-- 当前技能编辑 -->
+          <div v-if="currentSkill" class="mt-4 space-y-3 border-t border-slate-100 pt-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-500">当前:</span>
+                <template v-if="isEditing">
+                  <input
+                    v-model="editingName"
+                    type="text"
+                    class="w-24 rounded border border-indigo-300 bg-white px-2 py-1 text-sm text-slate-800 ring-2 ring-indigo-100 outline-none"
+                    autofocus
+                    @keydown="handleKeydown"
+                    @blur="saveEditName"
+                  />
+                </template>
+                <template v-else>
+                  <span class="text-sm font-medium text-slate-800">{{ currentSkill.name }}</span>
+                  <button
+                    class="rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600"
+                    title="编辑名称"
+                    @click="startEditName"
+                  >
+                    <EditOutlined class="size-3.5" />
+                  </button>
+                </template>
+              </div>
+              <button
+                class="flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-all hover:bg-emerald-600 hover:shadow"
+                @click="saveCurrentSkillData"
+              >
+                <SaveOutlined class="size-3" />
+                保存
+              </button>
             </div>
-            <button
-              class="flex items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition-all hover:bg-emerald-600 hover:shadow"
-              @click="saveCurrentSkillData"
-            >
-              <SaveOutlined class="size-3" />
-              保存
-            </button>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="rounded-lg bg-white p-2 shadow-sm">
+                <span class="text-slate-500">帧数:</span>
+                <span class="ml-1 font-medium text-slate-700">{{ totalFrames }}</span>
+              </div>
+              <div class="rounded-lg bg-white p-2 shadow-sm">
+                <span class="text-slate-500">FPS:</span>
+                <span class="ml-1 font-medium text-slate-700">{{ fps }}</span>
+              </div>
+            </div>
+
+            <!-- 技能配置 -->
+            <div class="border-t border-slate-100 pt-3">
+              <SkillConfigPanel
+                :config="targetSelection.config.value"
+                @update:config="handleUpdateConfig"
+              />
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="rounded-lg bg-white p-2 shadow-sm">
-              <span class="text-slate-500">帧数:</span>
-              <span class="ml-1 font-medium text-slate-700">{{ totalFrames }}</span>
-            </div>
-            <div class="rounded-lg bg-white p-2 shadow-sm">
-              <span class="text-slate-500">FPS:</span>
-              <span class="ml-1 font-medium text-slate-700">{{ fps }}</span>
-            </div>
-          </div>
-        </div>
+        </CollapsibleSection>
+
+        <!-- 步骤面板 -->
+        <SkillTabPanel
+          v-if="currentSkill"
+          :selected-step-index="selectedStepIndex"
+          :selected-step="selectedStep"
+          @select-step="(index) => (selectedStepIndex = index)"
+          @delete-step="deleteStep"
+          @add-step="addStep"
+          @update-step-param="updateStepParam"
+          @drop-step-from-library="handleDropStepFromLibrary"
+        />
+
+        <!-- 技能配置面板 -->
+        <SkillConfigPanel
+          v-if="currentSkill"
+          :config="targetSelection.config.value"
+          @update:config="handleUpdateConfig"
+        />
       </div>
-
-      <!-- 步骤面板 -->
-      <SkillTabPanel
-        v-if="currentSkill"
-        :selected-step-index="selectedStepIndex"
-        :selected-step="selectedStep"
-        @select-step="(index) => (selectedStepIndex = index)"
-        @delete-step="deleteStep"
-        @add-step="addStep"
-        @update-step-param="updateStepParam"
-        @drop-step-from-library="handleDropStepFromLibrary"
-      />
-
-      <!-- 技能配置面板 -->
-      <SkillConfigPanel
-        v-if="currentSkill"
-        :config="targetSelection.config.value"
-        @update:config="handleUpdateConfig"
-      />
     </template>
 
     <!-- 右侧编辑区域 -->

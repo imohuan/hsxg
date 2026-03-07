@@ -4,6 +4,7 @@
  * @description 步骤库、步骤参数编辑
  */
 import { computed } from "vue";
+import CollapsibleSection from "@/components/common/CollapsibleSection.vue";
 import type { SkillStep, StepType } from "@/types";
 import {
   useLibraryDragToTimeline,
@@ -36,9 +37,11 @@ const stepButtons: Array<{ label: string; type: StepType; description: string; i
 
 // ============ 拖拽 ============
 
-const { dragging: libraryDragging, onMouseDown: handleLibraryMouseDown } = useLibraryDragToTimeline((payload) => {
-  emit("drop-step-from-library", payload);
-});
+const { dragging: libraryDragging, onMouseDown: handleLibraryMouseDown } = useLibraryDragToTimeline(
+  (payload) => {
+    emit("drop-step-from-library", payload);
+  },
+);
 
 // ============ 计算属性 ============
 
@@ -54,13 +57,9 @@ const stepTypeName = computed(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col space-y-4 overflow-auto">
+  <div class="flex h-full flex-col gap-3 overflow-auto">
     <!-- 动作步骤库 -->
-    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <header class="mb-3">
-        <p class="text-[10px] font-medium tracking-wider text-slate-400 uppercase">动作步骤</p>
-        <h3 class="text-sm font-semibold text-slate-800">拖拽到时间轴</h3>
-      </header>
+    <CollapsibleSection title="动作步骤" :default-expanded="true">
       <div class="flex flex-col gap-2">
         <button
           v-for="button in stepButtons"
@@ -80,7 +79,7 @@ const stepTypeName = computed(() => {
           </span>
         </button>
       </div>
-    </section>
+    </CollapsibleSection>
 
     <!-- 拖拽中的克隆元素 -->
     <Teleport to="body">
@@ -103,12 +102,7 @@ const stepTypeName = computed(() => {
     </Teleport>
 
     <!-- 步骤参数编辑 -->
-    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <header class="mb-3">
-        <p class="text-[10px] font-medium tracking-wider text-slate-400 uppercase">步骤配置</p>
-        <h3 class="text-sm font-semibold text-slate-800">编辑选中步骤</h3>
-      </header>
-
+    <CollapsibleSection title="步骤配置" :default-expanded="true">
       <div v-if="selectedStep" class="space-y-3">
         <div class="flex items-center justify-between gap-2">
           <div class="text-xs text-slate-500">
@@ -292,6 +286,6 @@ const stepTypeName = computed(() => {
       </div>
 
       <p v-else class="text-xs text-slate-400">请在时间轴中选择一个步骤，以编辑它的参数。</p>
-    </section>
+    </CollapsibleSection>
   </div>
 </template>

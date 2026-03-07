@@ -4,11 +4,7 @@
  * @description 整合雪碧图编辑器、角色面板和动画预览组件（现代 SaaS 风格）
  */
 import { ref, computed, reactive } from "vue";
-import {
-  RefreshOutlined,
-  UploadFileOutlined,
-  SaveOutlined,
-} from "@vicons/material";
+import { RefreshOutlined, UploadFileOutlined, SaveOutlined } from "@vicons/material";
 import DesignerTabLayout from "@/components/layout/DesignerTabLayout.vue";
 import LibraryPanel from "@/components/common/LibraryPanel.vue";
 import CanvasPreview from "@/components/common/CanvasPreview.vue";
@@ -17,7 +13,7 @@ import type { LibraryItem } from "@/components/common/LibraryPanel.vue";
 import type { SpriteSheetPreviewConfig } from "@/modules/designer/core/PreviewPlayer";
 import { useDesignerStore } from "@/stores/designer.store";
 
-// ============ Store ============ 
+// ============ Store ============
 const designerStore = useDesignerStore();
 
 // ============ 状态 ============
@@ -204,9 +200,7 @@ const inputClass =
         <div class="space-y-4 p-4">
           <!-- 名称 -->
           <label class="block">
-            <span class="mb-1.5 block text-xs font-medium text-slate-600"
-              >名称</span
-            >
+            <span class="mb-1.5 block text-xs font-medium text-slate-600">名称</span>
             <input
               v-model="characterName"
               :class="inputClass"
@@ -217,9 +211,7 @@ const inputClass =
 
           <!-- 图片：URL 输入 + 上传按钮并排 -->
           <div>
-            <span class="mb-1.5 block text-xs font-medium text-slate-600"
-              >图片</span
-            >
+            <span class="mb-1.5 block text-xs font-medium text-slate-600">图片</span>
             <div class="flex gap-2">
               <input
                 v-model="characterConfig.url"
@@ -237,9 +229,7 @@ const inputClass =
                 <span>上传</span>
               </button>
             </div>
-            <p v-if="isLocalImage" class="mt-1.5 text-xs text-emerald-600">
-              ✓ 已加载本地图片
-            </p>
+            <p v-if="isLocalImage" class="mt-1.5 text-xs text-emerald-600">✓ 已加载本地图片</p>
             <input
               ref="fileInputRef"
               type="file"
@@ -252,9 +242,7 @@ const inputClass =
           <!-- 行列设置 -->
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
-              <span class="mb-1.5 block text-xs font-medium text-slate-600"
-                >行</span
-              >
+              <span class="mb-1.5 block text-xs font-medium text-slate-600">行</span>
               <input
                 v-model.number="characterConfig.rows"
                 :class="inputClass"
@@ -263,9 +251,7 @@ const inputClass =
               />
             </label>
             <label class="block">
-              <span class="mb-1.5 block text-xs font-medium text-slate-600"
-                >列</span
-              >
+              <span class="mb-1.5 block text-xs font-medium text-slate-600">列</span>
               <input
                 v-model.number="characterConfig.cols"
                 :class="inputClass"
@@ -277,9 +263,7 @@ const inputClass =
 
           <!-- 帧数量 -->
           <label class="block">
-            <span class="mb-1.5 block text-xs font-medium text-slate-600"
-              >帧数量</span
-            >
+            <span class="mb-1.5 block text-xs font-medium text-slate-600">帧数量</span>
             <input
               v-model.number="characterConfig.frameCount"
               :class="inputClass"
@@ -294,9 +278,7 @@ const inputClass =
 
           <!-- 缩放比例 -->
           <label class="block">
-            <span class="mb-1.5 block text-xs font-medium text-slate-600"
-              >缩放比例</span
-            >
+            <span class="mb-1.5 block text-xs font-medium text-slate-600">缩放比例</span>
             <input
               v-model.number="characterConfig.scale"
               :class="inputClass"

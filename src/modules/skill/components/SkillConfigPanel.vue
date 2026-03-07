@@ -85,14 +85,8 @@ const targetCountLabel = computed(() => {
 </script>
 
 <template>
-  <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-    <header class="mb-3">
-      <p class="text-[10px] font-medium tracking-wider text-slate-400 uppercase">技能配置</p>
-      <h3 class="text-sm font-semibold text-slate-800">基本属性</h3>
-    </header>
-
-    <div class="space-y-4">
-      <!-- 普通攻击开关 -->
+  <div class="space-y-4">
+    <!-- 普通攻击开关 -->
       <div class="flex items-center justify-between">
         <div>
           <span class="text-xs font-medium text-slate-700">普通攻击</span>
@@ -184,5 +178,5 @@ const targetCountLabel = computed(() => {
         </div>
       </div>
     </div>
-  </section>
+  </CollapsibleSection>
 </template>
